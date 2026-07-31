@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const ROLES = require("../utils/roles");
 
 const userSchema = new mongoose.Schema(
 {
@@ -36,8 +37,8 @@ const userSchema = new mongoose.Schema(
 
     role: {
         type: String,
-        enum: ["Citizen", "Admin", "Officer"],
-        default: "Citizen"
+        enum: Object.values(ROLES),
+        default: ROLES.CITIZEN
     },
 
     accountStatus: {

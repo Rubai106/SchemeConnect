@@ -9,9 +9,10 @@ const {
 } = require("../controllers/eligibilityController");
 const { protect } = require("../middleware/authMiddleware");
 const { authorizeRoles } = require("../middleware/roleMiddleware");
+const ROLES = require("../utils/roles");
 
 router.use(protect);
-router.use(authorizeRoles("Citizen"));
+router.use(authorizeRoles(ROLES.CITIZEN));
 
 router.post("/", createProfile);
 router.get("/me", getMyProfile);
