@@ -1,18 +1,33 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const connectDB = require("./config/db");
+const authRoutes = require("./routes/authRoutes");
+const citizenRoutes = require("./routes/citizenRoutes");
+const documentRoutes = require("./routes/DocumentRoutes");
+const eligibilityRoutes = require("./routes/eligibilityRoutes");
+const requestLogger = require("./middleware/requestLogger");
+const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 
 dotenv.config();
 
-connectDB();
-
 const app = express();
 
+connectDB();
+
 app.use(express.json());
+app.use(requestLogger);
+
+app.use("/api/auth", authRoutes);
+app.use("/api/citizens", citizenRoutes);
+app.use("/api/documents", documentRoutes);
+app.use("/api/eligibility", eligibilityRoutes);
 
 app.get("/", (req, res) => {
     res.send("SchemeConnect API is running...");
 });
+
+app.use(notFound);
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 1234;
 
