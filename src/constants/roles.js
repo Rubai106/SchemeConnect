@@ -2,7 +2,7 @@ const ROLES = {
     CITIZEN: "Citizen",
     VERIFICATION_OFFICER: "Verification Officer",
     FINANCE_OFFICER: "Finance Officer",
-    ADMIN: "Administrator",
+    ADMINISTRATOR: "Administrator",
     AUDITOR: "Auditor"
 };
 

@@ -4,7 +4,8 @@ const User = require("../models/User");
 const asyncHandler = require("../utils/asyncHandler");
 const createError = require("../utils/appError");
 const { sendSuccess } = require("../utils/apiResponse");
-const ROLES = require("../utils/roles");
+const ROLES = require("../constants/roles");
+const ACCOUNT_STATUS = require("../constants/accountStatus");
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRegex = /^\+?[0-9]{10,15}$/;
@@ -145,7 +146,7 @@ const registerUser = asyncHandler(async (req, res) => {
         contactNumber: contactNumber.trim(),
         password: hashedPassword,
         role: ROLES.CITIZEN,
-        accountStatus: "Active",
+        accountStatus: ACCOUNT_STATUS.ACTIVE,
         division: division.trim(),
         district: district.trim()
     });

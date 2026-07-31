@@ -9,7 +9,7 @@ const {
 } = require("../controllers/eligibilityController");
 const { protect } = require("../middleware/authMiddleware");
 const { authorizeRoles } = require("../middleware/roleMiddleware");
-const ROLES = require("../utils/roles");
+const ROLES = require("../constants/roles");
 
 router.use(protect);
 router.use(authorizeRoles(ROLES.CITIZEN));
