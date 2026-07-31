@@ -1,4 +1,6 @@
 const mongoose = require("mongoose");
+const ROLES = require("../constants/roles");
+const ACCOUNT_STATUS = require("../constants/accountStatus");
 
 const userSchema = new mongoose.Schema(
 {
@@ -36,14 +38,14 @@ const userSchema = new mongoose.Schema(
 
     role: {
         type: String,
-        enum: ["Citizen", "Admin", "Officer"],
-        default: "Citizen"
+        enum: Object.values(ROLES),
+        default: ROLES.CITIZEN
     },
 
     accountStatus: {
         type: String,
-        enum: ["Active", "Pending", "Suspended"],
-        default: "Active"
+        enum: Object.values(ACCOUNT_STATUS),
+        default: ACCOUNT_STATUS.ACTIVE
     },
 
     division: {
