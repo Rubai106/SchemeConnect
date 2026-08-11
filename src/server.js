@@ -28,7 +28,7 @@ app.get("/", (req, res) => {
     res.send("SchemeConnect API is running...");
 });
 
-app.get(["/login", "/register", "/dashboard"], (req, res) => {
+app.get(["/login", "/register", "/dashboard", "/eligibility"], (req, res) => {
     res.sendFile(path.join(__dirname, "../public/index.html"));
 });
 
