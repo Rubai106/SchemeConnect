@@ -1,5 +1,6 @@
 const express = require("express");
 const dotenv = require("dotenv");
+const path = require("path");
 const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const requestLogger = require("./middleware/requestLogger");
@@ -13,11 +14,16 @@ connectDB();
 
 app.use(express.json());
 app.use(requestLogger);
+app.use(express.static(path.join(__dirname, "../public")));
 
 app.use("/api/auth", authRoutes);
 
 app.get("/", (req, res) => {
     res.send("SchemeConnect API is running...");
+});
+
+app.get(["/login", "/register", "/dashboard"], (req, res) => {
+    res.sendFile(path.join(__dirname, "../public/index.html"));
 });
 
 app.use(notFound);
