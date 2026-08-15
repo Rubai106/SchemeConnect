@@ -34,6 +34,18 @@ export default function FraudDetection() {
     }
   }
 
+  async function analyze(id) {
+    setBusyId(id);
+    try {
+      await api.analyzeFlaggedApplication(id);
+      load();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   return (
     <div>
       <PageHeader
@@ -69,6 +81,13 @@ export default function FraudDetection() {
             <p className="mt-2 text-sm text-slate-600 leading-relaxed">
               {item.aiExplanation}
             </p>
+            <button
+              disabled={busyId === item._id}
+              onClick={() => analyze(item._id)}
+              className="mt-2 text-xs text-forest-600 underline decoration-dotted hover:text-forest-700 disabled:opacity-50"
+            >
+              {busyId === item._id ? "Analyzing…" : "Re-analyze with AI"}
+            </button>
 
             {item.comparison && (
               <div className="mt-3 grid grid-cols-2 gap-3 text-xs font-mono">

@@ -19,10 +19,12 @@ export const api = {
   getFlaggedApplications: () => request("/flagged-applications"),
   getFlaggedApplication: (id) => request(`/flagged-applications/${id}`),
   decideFlaggedApplication: (id, decision) =>
-    request(`/flagged-applications/${id}`, {
+    request(`/flagged-applications/${id}/decision`, {
       method: "PUT",
       body: JSON.stringify({ decision })
     }),
+  analyzeFlaggedApplication: (id) =>
+    request(`/flagged-applications/${id}/analyze`, { method: "POST" }),
 
   // Verification cases
   getCases: () => request("/verification-cases"),
