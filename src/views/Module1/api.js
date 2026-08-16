@@ -1,7 +1,7 @@
 // Shared API helper for the Beneficiary Lifecycle Management module.
-// vite.config.mjs proxies /api -> http://localhost:1451, so a relative path
-// works in dev. Override with VITE_API_BASE if frontend/backend are ever
-// deployed separately.
+// vite.config.mjs should proxy /api -> http://localhost:1234 (the backend
+// port from .env / server.js). Override with VITE_API_BASE if frontend/backend
+// are ever deployed separately.
 const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 
 async function request(path, options = {}) {
@@ -9,11 +9,13 @@ async function request(path, options = {}) {
     headers: { 'Content-Type': 'application/json' },
     ...options
   });
-  const data = await res.json().catch(() => ({}));
+  const body = await res.json().catch(() => ({}));
+
   if (!res.ok) {
-    throw new Error(data.error || `Request failed with status ${res.status}`);
+    throw new Error(body.message || body.error || `Request failed with status ${res.status}`);
   }
-  return data;
+
+  return body.data;
 }
 
 export const api = {

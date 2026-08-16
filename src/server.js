@@ -6,6 +6,10 @@ const authRoutes = require("./routes/authRoutes");
 const citizenRoutes = require("./routes/citizenRoutes");
 const documentRoutes = require("./routes/DocumentRoutes");
 const eligibilityRoutes = require("./routes/eligibilityRoutes");
+const analyticsRoutes = require("./routes/analyticsRoutes");
+const beneficiaryRoutes = require("./routes/beneficiaryRoutes");
+const auditLogRoutes = require("./routes/auditLogRoutes");
+const circularRoutes = require("./routes/circularRoutes");
 const requestLogger = require("./middleware/requestLogger");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 
@@ -23,6 +27,10 @@ app.use("/api/auth", authRoutes);
 app.use("/api/citizens", citizenRoutes);
 app.use("/api/documents", documentRoutes);
 app.use("/api/eligibility", eligibilityRoutes);
+app.use("/api/analytics", analyticsRoutes);
+app.use("/api/beneficiaries", beneficiaryRoutes);
+app.use("/api/audit-logs", auditLogRoutes);
+app.use("/api/circulars", circularRoutes);
 
 app.get("/", (req, res) => {
     res.send("SchemeConnect API is running...");

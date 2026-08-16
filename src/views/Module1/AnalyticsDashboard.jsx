@@ -41,7 +41,7 @@ function Bar({ label, value, max, formatValue }) {
 
 export default function AnalyticsDashboard() {
   const [overview, setOverview] = useState(null);
-  const [districts, setDistricts] = useState([]);
+  const [regions, setRegions] = useState([]);
   const [budgets, setBudgets] = useState([]);
   const [popularity, setPopularity] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -53,13 +53,13 @@ export default function AnalyticsDashboard() {
       try {
         const [ov, dist, bud, pop] = await Promise.all([
           api.getOverview(),
-          api.getDistrictDistribution(),
+          api.getRegionDistribution(),
           api.getBudgetUtilization(),
           api.getSchemePopularity()
         ]);
         if (cancelled) return;
         setOverview(ov);
-        setDistricts(dist);
+        setRegions(dist);
         setBudgets(bud);
         setPopularity(pop);
       } catch (err) {
@@ -88,7 +88,7 @@ export default function AnalyticsDashboard() {
     );
   }
 
-  const maxDistrict = Math.max(1, ...districts.map((d) => d.totalBeneficiaries));
+  const maxRegion = Math.max(1, ...regions.map((d) => d.totalBeneficiaries));
   const maxPopularity = Math.max(1, ...popularity.map((p) => p.applicationCount));
 
   return (
@@ -112,15 +112,15 @@ export default function AnalyticsDashboard() {
       <section className="grid md:grid-cols-2 gap-6">
         <div className="bg-white border border-black/5 rounded-lg p-6 shadow-sm">
           <h2 className="text-sm font-semibold text-[#20242A] mb-4">
-            District-wise Beneficiary Distribution
+            Region-wise Beneficiary Distribution
           </h2>
-          {districts.length === 0 ? (
+          {regions.length === 0 ? (
             <p className="text-sm text-[#6B7280]">No beneficiary data yet.</p>
           ) : (
-            districts
+            regions
               .slice(0, 10)
               .map((d) => (
-                <Bar key={d.district} label={d.district} value={d.totalBeneficiaries} max={maxDistrict} />
+                <Bar key={d.region} label={d.region} value={d.totalBeneficiaries} max={maxRegion} />
               ))
           )}
         </div>
