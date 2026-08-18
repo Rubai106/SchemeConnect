@@ -2,17 +2,24 @@ const express = require("express");
 const router = express.Router();
 
 const {
-    createDocument,
-    getAllDocuments,
+    handleMulterUpload,
+    uploadDocument,
+    getMyDocuments,
     getDocumentById,
-    updateDocument,
-    deleteDocument
+    deleteDocument,
+    downloadDocument
 } = require("../controllers/DocumentController");
+const { protect } = require("../middleware/authMiddleware");
+const { authorizeRoles } = require("../middleware/roleMiddleware");
 
-router.post("/", createDocument);
-router.get("/", getAllDocuments);
+// All document routes require authentication and Citizen role
+router.use(protect);
+router.use(authorizeRoles("Citizen"));
+
+router.post("/", handleMulterUpload, uploadDocument);
+router.get("/", getMyDocuments);
 router.get("/:id", getDocumentById);
-router.put("/:id", updateDocument);
+router.get("/:id/download", downloadDocument);
 router.delete("/:id", deleteDocument);
 
 module.exports = router;

@@ -9,14 +9,17 @@ const routes = {
     login: "/login",
     register: "/register",
     dashboard: "/dashboard",
-    eligibility: "/eligibility"
+    eligibility: "/eligibility",
+    documents: "/documents"
 };
 
 let currentUser = null;
 
 const apiRequest = async (url, options = {}) => {
+    const isFormData = options.body instanceof FormData;
+
     const headers = {
-        "Content-Type": "application/json",
+        ...(isFormData ? {} : { "Content-Type": "application/json" }),
         ...(options.headers || {})
     };
 
@@ -77,7 +80,7 @@ const setPage = (content, activePage = "") => {
                             <nav class="nav" aria-label="Primary navigation">
                                 <a href="/dashboard" data-link class="${activePage === "dashboard" ? "active" : ""}">Home</a>
                                 <a href="/eligibility" data-link class="${activePage === "eligibility" ? "active" : ""}">Eligibility</a>
-                                <span aria-disabled="true">Documents</span>
+                                <a href="/documents" data-link class="${activePage === "documents" ? "active" : ""}">Documents</a>
                                 <span aria-disabled="true">Offices</span>
                             </nav>
 
@@ -334,6 +337,12 @@ const renderDashboard = async () => {
             </div>
 
             <div class="card summary-card">
+                <h2>Document Vault</h2>
+                <p>Upload and manage your welfare documents such as National ID, certificates, and records.</p>
+                <button class="button primary" id="openDocuments" type="button">Open Documents</button>
+            </div>
+
+            <div class="card summary-card">
                 <h2>Account Information</h2>
                 <p>${currentUser.email}</p>
                 <p>${currentUser.division}, ${currentUser.district}</p>
@@ -345,6 +354,10 @@ const renderDashboard = async () => {
 
     document.getElementById("openEligibility").addEventListener("click", () => {
         navigate(routes.eligibility);
+    });
+
+    document.getElementById("openDocuments").addEventListener("click", () => {
+        navigate(routes.documents);
     });
 };
 
@@ -581,6 +594,220 @@ const deleteProfile = async () => {
     }
 };
 
+// ============================================================
+// Easy to modify: document types list
+// ============================================================
+const DOCUMENT_TYPES = [
+    "National ID",
+    "Birth Certificate",
+    "Income Certificate",
+    "Disability Certificate",
+    "Educational Record",
+    "Other"
+];
+
+const documentTypeOptions = () => {
+    return DOCUMENT_TYPES.map(
+        (type) => `<option value="${type}">${type}</option>`
+    ).join("");
+};
+
+const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric"
+    });
+};
+
+const renderDocuments = async () => {
+    if (!(await requireAuth())) {
+        return;
+    }
+
+    setPage(
+        `
+        <section class="page-title">
+            <h1>Document Vault</h1>
+            <p>Keep your important welfare documents in one place.</p>
+        </section>
+
+        <section class="card upload-card">
+            <h2>Upload Document</h2>
+            <form id="uploadForm">
+                <div id="messageBox" class="message error" hidden></div>
+
+                <div class="form-grid">
+                    <div class="form-row">
+                        <label for="documentType">Document Type</label>
+                        <select id="documentType" name="documentType" required>
+                            <option value="">Select type</option>
+                            ${documentTypeOptions()}
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="documentNumber">Document Number (optional)</label>
+                        <input id="documentNumber" name="documentNumber" type="text">
+                    </div>
+
+                    <div class="form-row full">
+                        <label for="fileInput">File (PDF, JPG, JPEG, PNG — max 5 MB)</label>
+                        <input id="fileInput" name="file" type="file" accept=".pdf,.jpg,.jpeg,.png" required>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button class="button primary" type="submit">Upload Document</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="card documents-card">
+            <h2>Your Documents</h2>
+            <div id="documentsList">
+                <p class="muted-text">Loading documents...</p>
+            </div>
+        </section>
+        `,
+        "documents"
+    );
+
+    // Attach upload form handler
+    document.getElementById("uploadForm").addEventListener("submit", handleUpload);
+
+    // Load documents
+    loadDocuments();
+};
+
+const handleUpload = async (event) => {
+    event.preventDefault();
+
+    const form = event.target;
+    const button = form.querySelector("button[type='submit']");
+    const fileInput = document.getElementById("fileInput");
+
+    if (!fileInput.files || fileInput.files.length === 0) {
+        showMessage("Please select a file.");
+        return;
+    }
+
+    button.disabled = true;
+    button.textContent = "Uploading...";
+
+    const formData = new FormData();
+    formData.append("documentType", form.documentType.value);
+    formData.append("documentNumber", form.documentNumber.value.trim());
+    formData.append("file", fileInput.files[0]);
+
+    try {
+        await apiRequest("/api/documents", {
+            method: "POST",
+            body: formData
+        });
+
+        showMessage("Document uploaded successfully.", "success");
+        form.reset();
+        loadDocuments();
+    } catch (error) {
+        showMessage(error.message);
+    } finally {
+        button.disabled = false;
+        button.textContent = "Upload Document";
+    }
+};
+
+const loadDocuments = async () => {
+    const container = document.getElementById("documentsList");
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = "<p class='muted-text'>Loading documents...</p>";
+
+    try {
+        const result = await apiRequest("/api/documents");
+        const documents = result.data.documents;
+
+        if (!documents || documents.length === 0) {
+            container.innerHTML = "<p class='muted-text'>You have not uploaded any documents yet.</p>";
+            return;
+        }
+
+        renderDocumentList(documents);
+    } catch (error) {
+        container.innerHTML = `<p class='muted-text error-text'>${error.message}</p>`;
+    }
+};
+
+const renderDocumentList = (documents) => {
+    const container = document.getElementById("documentsList");
+
+    if (!container) {
+        return;
+    }
+
+    const rows = documents.map((doc) => `
+        <tr>
+            <td>${doc.documentType}</td>
+            <td>${doc.fileName}</td>
+            <td>${doc.documentNumber || "—"}</td>
+            <td><span class="status-badge status-${doc.verificationStatus.toLowerCase()}">${doc.verificationStatus}</span></td>
+            <td>${formatDate(doc.createdAt)}</td>
+            <td class="action-cell">
+                <a href="/api/documents/${doc._id}/download" target="_blank" class="action-link">View</a>
+                <button class="action-link danger-link" type="button" data-delete-id="${doc._id}">Delete</button>
+            </td>
+        </tr>
+    `).join("");
+
+    container.innerHTML = `
+        <table class="documents-table">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>File Name</th>
+                    <th>Number</th>
+                    <th>Status</th>
+                    <th>Uploaded</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${rows}
+            </tbody>
+        </table>
+    `;
+
+    // Attach delete handlers
+    container.querySelectorAll("[data-delete-id]").forEach((button) => {
+        button.addEventListener("click", () => {
+            handleDeleteDocument(button.getAttribute("data-delete-id"));
+        });
+    });
+};
+
+const handleDeleteDocument = async (id) => {
+    const confirmed = window.confirm("Delete this document?");
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+        await apiRequest(`/api/documents/${id}`, {
+            method: "DELETE"
+        });
+
+        showMessage("Document deleted successfully.", "success");
+        loadDocuments();
+    } catch (error) {
+        showMessage(error.message);
+    }
+};
+
 const logout = async () => {
     try {
         await apiRequest("/api/auth/logout", {
@@ -610,6 +837,11 @@ const render = async () => {
 
     if (path === routes.eligibility) {
         await renderEligibility();
+        return;
+    }
+
+    if (path === routes.documents) {
+        await renderDocuments();
         return;
     }
 

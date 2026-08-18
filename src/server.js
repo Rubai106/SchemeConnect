@@ -19,6 +19,9 @@ app.use(express.json());
 app.use(requestLogger);
 app.use(express.static(path.join(__dirname, "../public")));
 
+// Serve uploaded document files (only the uploads directory)
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+
 app.use("/api/auth", authRoutes);
 app.use("/api/citizens", citizenRoutes);
 app.use("/api/documents", documentRoutes);
@@ -28,7 +31,7 @@ app.get("/", (req, res) => {
     res.send("SchemeConnect API is running...");
 });
 
-app.get(["/login", "/register", "/dashboard", "/eligibility"], (req, res) => {
+app.get(["/login", "/register", "/dashboard", "/eligibility", "/documents"], (req, res) => {
     res.sendFile(path.join(__dirname, "../public/index.html"));
 });
 
