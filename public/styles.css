@@ -528,6 +528,69 @@ select:focus {
 }
 
 /* =========================
+   ADMINISTRATOR CONSOLE
+   (new — added for Member 4's four features)
+   ========================= */
+
+.table-wrap {
+    overflow-x: auto;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.table th,
+.table td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+}
+
+.table th {
+    color: var(--muted);
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.table tbody tr:hover {
+    background: #f7faf9;
+}
+
+.badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.badge-pending {
+    background: #f3f4f6;
+    color: var(--muted);
+}
+
+.badge-under_review {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.badge-verified {
+    background: #ecfdf5;
+    color: var(--success);
+}
+
+.badge-flagged {
+    background: #fef2f2;
+    color: var(--danger);
+}
+
+/* =========================
    MOBILE
    ========================= */
 
@@ -607,4 +670,61 @@ select:focus {
     .auth-link {
         text-align: center;
     }
+}
+
+/* =========================
+   MODAL
+   (new — for the Register Beneficiary popup)
+   ========================= */
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 50;
+}
+
+.modal-backdrop[hidden] {
+    display: none;
+}
+
+.modal {
+    background: var(--white);
+    border-radius: 10px;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+    padding: 28px;
+    width: 100%;
+    max-width: 640px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.modal-close {
+    border: 0;
+    background: transparent;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--muted);
+    padding: 0;
+}
+
+.modal-close:hover {
+    color: var(--text);
 }

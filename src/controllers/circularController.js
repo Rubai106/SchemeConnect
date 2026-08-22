@@ -19,7 +19,11 @@ exports.syncCirculars = asyncHandler(async (req, res) => {
     }
 
     const inserted = await Circular.insertMany(
-        circulars.map((c) => ({ ...c, syncedAt: new Date() }))
+        circulars.map((c) => ({
+        ...c,
+        referenceNo: c.referenceNo || `GOV-CIR-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        syncedAt: new Date()
+    }))
     );
 
     await AuditLog.create({

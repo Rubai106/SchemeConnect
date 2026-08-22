@@ -209,3 +209,10 @@ exports.getSchemeAnalytics = asyncHandler(async (req, res) => {
         }))
     });
 });
+
+// GET a lightweight list of schemes (id + name) — for quickly grabbing a
+// real schemeId when testing via curl/Postman instead of digging through Atlas.
+exports.getSchemesList = asyncHandler(async (req, res) => {
+    const schemes = await Scheme.find({}, 'name category');
+    return sendSuccess(res, 200, "Schemes list fetched successfully", schemes);
+});

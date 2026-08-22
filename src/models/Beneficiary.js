@@ -2,8 +2,8 @@ const mongoose = require('mongoose');
 
 const beneficiarySchema = new mongoose.Schema(
   {
-    citizenId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    applicationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Application', required: true },
+    citizenId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    applicationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Application'},
     schemeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Scheme', required: true },
 
     name: { type: String, required: true },
