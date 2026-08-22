@@ -712,7 +712,7 @@ const renderConsoleBeneficiaries = async () => {
                 </div>
             </div>
 
-                        <div class="modal-backdrop" id="editModalBackdrop" hidden>
+            <div class="modal-backdrop" id="editModalBackdrop" hidden>
                 <div class="modal">
                     <div class="modal-header">
                         <h2>Update Beneficiary</h2>
@@ -755,7 +755,6 @@ const renderConsoleBeneficiaries = async () => {
                     </form>
                 </div>
             </div>
-
 
             <div class="table-wrap">
                 <table class="table">
@@ -850,6 +849,7 @@ const renderConsoleBeneficiaries = async () => {
             });
         });
     };
+
     const loadBeneficiaries = async () => {
         try {
             const result = await apiRequest("/api/beneficiaries");
@@ -908,7 +908,20 @@ const renderConsoleBeneficiaries = async () => {
 
             form.reset();
             document.getElementById("registerModalBackdrop").hidden = true;
-                document.getElementById("closeEditModal").addEventListener("click", () => {
+            await loadBeneficiaries();
+        } catch (error) {
+            showMessage(error.message);
+        } finally {
+            button.disabled = false;
+            button.textContent = "Save Beneficiary";
+        }
+    });
+
+    // NOTE: these three listeners were previously (incorrectly) nested inside
+    // the registerBeneficiaryForm submit handler above, meaning they only got
+    // attached after a successful Register submission. Moved out here so
+    // they're always wired up as soon as the page renders.
+    document.getElementById("closeEditModal").addEventListener("click", () => {
         document.getElementById("editModalBackdrop").hidden = true;
     });
 
@@ -948,14 +961,6 @@ const renderConsoleBeneficiaries = async () => {
         } finally {
             button.disabled = false;
             button.textContent = "Save Changes";
-        }
-    });
-            await loadBeneficiaries();
-        } catch (error) {
-            showMessage(error.message);
-        } finally {
-            button.disabled = false;
-            button.textContent = "Save Beneficiary";
         }
     });
 
@@ -1193,10 +1198,6 @@ const renderConsoleAnalytics = async () => {
             const result = await apiRequest(`/api/analytics/dashboard${query}`);
             const data = result.data;
 
-            // Your backend's getDashboard only returns totalApplications,
-            // approved, rejected, pending, and the raw applications array —
-            // not approvalRate/rejectionRate/districtDistribution. Computing
-            // them here instead of assuming the backend provides them.
             const approvalRate = data.totalApplications
                 ? ((data.approved / data.totalApplications) * 100).toFixed(2)
                 : "0.00";
