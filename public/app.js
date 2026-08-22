@@ -757,7 +757,7 @@ const renderDocumentList = (documents) => {
             <td><span class="status-badge status-${doc.verificationStatus.toLowerCase()}">${doc.verificationStatus}</span></td>
             <td>${formatDate(doc.createdAt)}</td>
             <td class="action-cell">
-                <a href="/api/documents/${doc._id}/download" target="_blank" class="action-link">View</a>
+                <button class="action-link" type="button" data-view-id="${doc._id}">View</button>
                 <button class="action-link danger-link" type="button" data-delete-id="${doc._id}">Delete</button>
             </td>
         </tr>
@@ -781,12 +781,61 @@ const renderDocumentList = (documents) => {
         </table>
     `;
 
+    // Attach view handlers
+    container.querySelectorAll("[data-view-id]").forEach((button) => {
+        button.addEventListener("click", () => {
+            handleViewDocument(button.getAttribute("data-view-id"));
+        });
+    });
+
     // Attach delete handlers
     container.querySelectorAll("[data-delete-id]").forEach((button) => {
         button.addEventListener("click", () => {
             handleDeleteDocument(button.getAttribute("data-delete-id"));
         });
     });
+};
+
+const handleViewDocument = async (id) => {
+    const token = getToken();
+
+    if (!token) {
+        showMessage("Session expired. Please login again.");
+        navigate(routes.login);
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/documents/${id}/download`, {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            let errorMessage = "Could not load document.";
+
+            try {
+                const errorBody = await response.json();
+                errorMessage = errorBody.message || errorMessage;
+            } catch (parseError) {
+                // Response was not JSON, use default message
+            }
+
+            showMessage(errorMessage);
+            return;
+        }
+
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+
+        window.open(blobUrl, "_blank");
+
+        // Revoke after the new tab has loaded the content
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+    } catch (error) {
+        showMessage(error.message || "Could not load document.");
+    }
 };
 
 const handleDeleteDocument = async (id) => {
