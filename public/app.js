@@ -10,7 +10,9 @@ const routes = {
     register: "/register",
     dashboard: "/dashboard",
     eligibility: "/eligibility",
-    documents: "/documents"
+    documents: "/documents",
+    schemes: "/schemes",
+    offices: "/offices"
 };
 
 let currentUser = null;
@@ -81,7 +83,8 @@ const setPage = (content, activePage = "") => {
                                 <a href="/dashboard" data-link class="${activePage === "dashboard" ? "active" : ""}">Home</a>
                                 <a href="/eligibility" data-link class="${activePage === "eligibility" ? "active" : ""}">Eligibility</a>
                                 <a href="/documents" data-link class="${activePage === "documents" ? "active" : ""}">Documents</a>
-                                <span aria-disabled="true">Offices</span>
+                                <a href="/schemes" data-link class="${activePage === "schemes" ? "active" : ""}">Schemes</a>
+                                <a href="/offices" data-link class="${activePage === "offices" ? "active" : ""}">Offices</a>
                             </nav>
 
                             <div class="user-area">
@@ -857,6 +860,586 @@ const handleDeleteDocument = async (id) => {
     }
 };
 
+// ============================================================
+// Easy to modify: scheme categories (frontend)
+// ============================================================
+const SCHEME_CATEGORIES = [
+    "Agriculture",
+    "Education",
+    "Healthcare",
+    "Disability",
+    "Women",
+    "SME",
+    "Housing"
+];
+
+const categoryOptions = () => {
+    return SCHEME_CATEGORIES.map(
+        (cat) => `<option value="${cat}">${cat}</option>`
+    ).join("");
+};
+
+// ============================================================
+// Schemes page
+// ============================================================
+const renderSchemes = async () => {
+    if (!(await requireAuth())) {
+        return;
+    }
+
+    setPage(
+        `
+        <section class="page-title">
+            <h1>Welfare Schemes</h1>
+            <p>Browse available welfare schemes and check your eligibility.</p>
+        </section>
+
+        <section class="card filter-card">
+            <div class="filter-row">
+                <div class="form-row">
+                    <label for="schemeCategory">Category</label>
+                    <select id="schemeCategory">
+                        <option value="">All</option>
+                        ${categoryOptions()}
+                    </select>
+                </div>
+                <div class="form-row">
+                    <label for="schemeStatus">Status</label>
+                    <select id="schemeStatus">
+                        <option value="">All</option>
+                        <option value="Open">Open</option>
+                        <option value="Closed">Closed</option>
+                    </select>
+                </div>
+                <div class="form-row filter-action">
+                    <label>&nbsp;</label>
+                    <button class="button primary" id="filterSchemesBtn" type="button">Filter</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="card recommended-card">
+            <h2>Recommended for You</h2>
+            <div id="recommendedList">
+                <p class="muted-text">Loading recommendations...</p>
+            </div>
+        </section>
+
+        <section class="card schemes-card">
+            <h2>All Schemes</h2>
+            <div id="schemesList">
+                <p class="muted-text">Loading schemes...</p>
+            </div>
+        </section>
+        `,
+        "schemes"
+    );
+
+    document.getElementById("filterSchemesBtn").addEventListener("click", loadSchemes);
+    loadSchemes();
+    loadRecommended();
+};
+
+const loadSchemes = async () => {
+    const container = document.getElementById("schemesList");
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = "<p class='muted-text'>Loading schemes...</p>";
+
+    const category = document.getElementById("schemeCategory").value;
+    const status = document.getElementById("schemeStatus").value;
+
+    let url = "/api/schemes?";
+    if (category) url += `category=${encodeURIComponent(category)}&`;
+    if (status) url += `status=${encodeURIComponent(status)}&`;
+
+    try {
+        const result = await apiRequest(url);
+        const schemes = result.data.schemes;
+
+        if (!schemes || schemes.length === 0) {
+            container.innerHTML = "<p class='muted-text'>No schemes found.</p>";
+            return;
+        }
+
+        renderSchemeCards(schemes);
+    } catch (error) {
+        container.innerHTML = `<p class='muted-text error-text'>${error.message}</p>`;
+    }
+};
+
+const renderSchemeCards = (schemes) => {
+    const container = document.getElementById("schemesList");
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = schemes.map((scheme) => `
+        <div class="scheme-item">
+            <div class="scheme-header">
+                <h3>${scheme.name}</h3>
+                <span class="scheme-badge status-badge status-${scheme.applicationStatus === "Open" ? "verified" : "rejected"}">${scheme.applicationStatus}</span>
+            </div>
+            <span class="scheme-category">${scheme.category}</span>
+            <p class="scheme-desc">${scheme.description}</p>
+            <div class="scheme-meta">
+                <span>Benefit: <strong>৳${scheme.benefitAmount.toLocaleString()}</strong></span>
+                <span>Deadline: <strong>${formatDate(scheme.applicationDeadline)}</strong></span>
+            </div>
+            <button class="button secondary scheme-detail-btn" type="button" data-scheme-id="${scheme._id}">View Details</button>
+        </div>
+    `).join("");
+
+    container.querySelectorAll("[data-scheme-id]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            navigate(`/schemes/${btn.getAttribute("data-scheme-id")}`);
+        });
+    });
+};
+
+const loadRecommended = async () => {
+    const container = document.getElementById("recommendedList");
+
+    if (!container) {
+        return;
+    }
+
+    try {
+        const result = await apiRequest("/api/schemes/recommended");
+        const data = result.data;
+
+        if (!data.hasProfile) {
+            container.innerHTML = "<p class='muted-text'>Create your Eligibility Profile to see recommended schemes.</p>";
+            return;
+        }
+
+        if (!data.schemes || data.schemes.length === 0) {
+            container.innerHTML = "<p class='muted-text'>No matching schemes found based on your profile.</p>";
+            return;
+        }
+
+        container.innerHTML = data.schemes.map((scheme) => `
+            <div class="recommended-item">
+                <div class="scheme-header">
+                    <h3>${scheme.name}</h3>
+                    <span class="eligible-badge">You may be eligible</span>
+                </div>
+                <span class="scheme-category">${scheme.category}</span>
+                <p class="scheme-desc">${scheme.description}</p>
+                <div class="scheme-meta">
+                    <span>Benefit: <strong>৳${scheme.benefitAmount.toLocaleString()}</strong></span>
+                    <span>Deadline: <strong>${formatDate(scheme.applicationDeadline)}</strong></span>
+                </div>
+                <button class="button secondary scheme-detail-btn" type="button" data-scheme-id="${scheme._id}">View Details</button>
+            </div>
+        `).join("");
+
+        container.querySelectorAll("[data-scheme-id]").forEach((btn) => {
+            btn.addEventListener("click", () => {
+                navigate(`/schemes/${btn.getAttribute("data-scheme-id")}`);
+            });
+        });
+    } catch (error) {
+        container.innerHTML = `<p class='muted-text error-text'>${error.message}</p>`;
+    }
+};
+
+// ============================================================
+// Scheme detail page
+// ============================================================
+const renderSchemeDetail = async () => {
+    if (!(await requireAuth())) {
+        return;
+    }
+
+    const pathParts = window.location.pathname.split("/");
+    const schemeId = pathParts[pathParts.length - 1];
+
+    setPage(
+        `
+        <section class="page-title">
+            <h1>Scheme Details</h1>
+            <p><a href="/schemes" data-link>← Back to all schemes</a></p>
+        </section>
+
+        <section class="card detail-card">
+            <p class="muted-text">Loading scheme...</p>
+        </section>
+        `,
+        "schemes"
+    );
+
+    // Re-bind the back link
+    document.querySelectorAll("[data-link]").forEach((link) => {
+        link.addEventListener("click", (event) => {
+            event.preventDefault();
+            navigate(link.getAttribute("href"));
+        });
+    });
+
+    try {
+        const result = await apiRequest(`/api/schemes/${schemeId}`);
+        const scheme = result.data.scheme;
+
+        const criteria = scheme.eligibilityCriteria || {};
+        const criteriaItems = [];
+
+        if (criteria.minimumIncome !== null && criteria.minimumIncome !== undefined) {
+            criteriaItems.push(`Minimum income: ৳${criteria.minimumIncome.toLocaleString()}`);
+        }
+        if (criteria.maximumIncome !== null && criteria.maximumIncome !== undefined) {
+            criteriaItems.push(`Maximum income: ৳${criteria.maximumIncome.toLocaleString()}`);
+        }
+        if (criteria.district && criteria.district.trim()) {
+            criteriaItems.push(`District: ${criteria.district}`);
+        }
+        if (criteria.disabilityRequired) {
+            criteriaItems.push("Disability certificate required");
+        }
+        if (criteria.minimumFamilySize !== null && criteria.minimumFamilySize !== undefined) {
+            criteriaItems.push(`Minimum family size: ${criteria.minimumFamilySize}`);
+        }
+
+        const criteriaHtml = criteriaItems.length > 0
+            ? `<ul class="criteria-list">${criteriaItems.map((c) => `<li>${c}</li>`).join("")}</ul>`
+            : "<p class='muted-text'>No specific criteria defined.</p>";
+
+        const docsHtml = scheme.requiredDocuments && scheme.requiredDocuments.length > 0
+            ? `<ul class="docs-list">${scheme.requiredDocuments.map((d) => `<li>${d}</li>`).join("")}</ul>`
+            : "<p class='muted-text'>No documents specified.</p>";
+
+        document.querySelector(".detail-card").innerHTML = `
+            <div class="scheme-header">
+                <h2>${scheme.name}</h2>
+                <span class="scheme-badge status-badge status-${scheme.applicationStatus === "Open" ? "verified" : "rejected"}">${scheme.applicationStatus}</span>
+            </div>
+            <span class="scheme-category">${scheme.category}</span>
+            <p class="scheme-desc">${scheme.description}</p>
+
+            <div class="detail-grid">
+                <div class="detail-section">
+                    <h3>Benefit Amount</h3>
+                    <p>৳${scheme.benefitAmount.toLocaleString()}</p>
+                </div>
+                <div class="detail-section">
+                    <h3>Application Deadline</h3>
+                    <p>${formatDate(scheme.applicationDeadline)}</p>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h3>Eligibility Criteria</h3>
+                ${criteriaHtml}
+            </div>
+
+            <div class="detail-section">
+                <h3>Required Documents</h3>
+                ${docsHtml}
+            </div>
+        `;
+    } catch (error) {
+        document.querySelector(".detail-card").innerHTML = `<p class='muted-text error-text'>${error.message}</p>`;
+    }
+};
+
+// ============================================================
+// Easy to modify: office types (frontend)
+// ============================================================
+const OFFICE_TYPES = [
+    "Welfare Office",
+    "Union Digital Center",
+    "Service Center"
+];
+
+const officeTypeOptions = () => {
+    return OFFICE_TYPES.map(
+        (type) => `<option value="${type}">${type}</option>`
+    ).join("");
+};
+
+// ============================================================
+// Offices page
+// ============================================================
+let officesMap = null;
+let officesMarkers = [];
+let allOffices = [];
+
+const renderOffices = async () => {
+    if (!(await requireAuth())) {
+        return;
+    }
+
+    setPage(
+        `
+        <section class="page-title">
+            <h1>Nearby Welfare Offices</h1>
+            <p>Find welfare offices, union digital centers, and service centers near you.</p>
+        </section>
+
+        <section class="card filter-card">
+            <div class="filter-row">
+                <div class="form-row">
+                    <label for="officeDivision">Division</label>
+                    <input id="officeDivision" type="text" placeholder="e.g. Dhaka">
+                </div>
+                <div class="form-row">
+                    <label for="officeDistrict">District</label>
+                    <input id="officeDistrict" type="text" placeholder="e.g. Gazipur">
+                </div>
+                <div class="form-row">
+                    <label for="officeType">Office Type</label>
+                    <select id="officeType">
+                        <option value="">All</option>
+                        ${officeTypeOptions()}
+                    </select>
+                </div>
+                <div class="form-row filter-action">
+                    <label>&nbsp;</label>
+                    <button class="button primary" id="filterOfficesBtn" type="button">Filter</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="card map-card">
+            <div id="officesMap" class="map-container">
+                <p class="muted-text">Loading map...</p>
+            </div>
+            <div id="geoStatus" class="geo-status"></div>
+        </section>
+
+        <section class="card offices-card">
+            <h2>Office Directory</h2>
+            <div id="officesList">
+                <p class="muted-text">Loading offices...</p>
+            </div>
+        </section>
+        `,
+        "offices"
+    );
+
+    document.getElementById("filterOfficesBtn").addEventListener("click", loadOffices);
+
+    loadOffices();
+    initMap();
+};
+
+const initMap = async () => {
+    // Fetch Google Maps API key from server config
+    let apiKey = "";
+
+    try {
+        const response = await fetch("/api/config/maps-key");
+        const config = await response.json();
+        apiKey = config.key || "";
+    } catch (error) {
+        // Key fetch failed, map won't load
+    }
+
+    const mapContainer = document.getElementById("officesMap");
+
+    if (!apiKey || apiKey === "YOUR_GOOGLE_MAPS_API_KEY_HERE") {
+        mapContainer.innerHTML = "<p class='muted-text'>Google Maps API key not configured. Set GOOGLE_MAPS_API_KEY in .env to enable the map.</p>";
+        return;
+    }
+
+    // Load Google Maps script
+    if (!window.google || !window.google.maps) {
+        await new Promise((resolve, reject) => {
+            const script = document.createElement("script");
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=Function.prototype`;
+            script.async = true;
+            script.defer = true;
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    }
+
+    // Default center (Dhaka)
+    const defaultCenter = { lat: 23.8103, lng: 90.4125 };
+
+    officesMap = new google.maps.Map(mapContainer, {
+        center: defaultCenter,
+        zoom: 7
+    });
+
+    // Try geolocation
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const userPos = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                };
+                officesMap.setCenter(userPos);
+                officesMap.setZoom(10);
+
+                const statusEl = document.getElementById("geoStatus");
+                if (statusEl) {
+                    statusEl.textContent = `Location detected: ${userPos.lat.toFixed(4)}, ${userPos.lng.toFixed(4)}`;
+                }
+
+                // Load nearby offices
+                loadNearbyOffices(userPos.lat, userPos.lng);
+            },
+            () => {
+                const statusEl = document.getElementById("geoStatus");
+                if (statusEl) {
+                    statusEl.textContent = "Location access denied. Showing all offices.";
+                }
+            }
+        );
+    }
+};
+
+const loadNearbyOffices = async (lat, lng) => {
+    try {
+        const result = await apiRequest(`/api/offices/nearby?latitude=${lat}&longitude=${lng}`);
+        allOffices = result.data.offices;
+        renderOfficesList(allOffices);
+        renderMapMarkers(allOffices);
+    } catch (error) {
+        // Nearby failed, regular list should still work
+    }
+};
+
+const loadOffices = async () => {
+    const container = document.getElementById("officesList");
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = "<p class='muted-text'>Loading offices...</p>";
+
+    const division = document.getElementById("officeDivision").value.trim();
+    const district = document.getElementById("officeDistrict").value.trim();
+    const officeType = document.getElementById("officeType").value;
+
+    let url = "/api/offices?";
+    if (division) url += `division=${encodeURIComponent(division)}&`;
+    if (district) url += `district=${encodeURIComponent(district)}&`;
+    if (officeType) url += `officeType=${encodeURIComponent(officeType)}&`;
+
+    try {
+        const result = await apiRequest(url);
+        allOffices = result.data.offices;
+
+        if (!allOffices || allOffices.length === 0) {
+            container.innerHTML = "<p class='muted-text'>No offices found.</p>";
+            clearMarkers();
+            return;
+        }
+
+        renderOfficesList(allOffices);
+        renderMapMarkers(allOffices);
+    } catch (error) {
+        container.innerHTML = `<p class='muted-text error-text'>${error.message}</p>`;
+    }
+};
+
+const renderOfficesList = (offices) => {
+    const container = document.getElementById("officesList");
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = offices.map((office) => `
+        <div class="office-item">
+            <div class="office-header">
+                <h3>${office.name}</h3>
+                <span class="office-type-badge">${office.officeType}</span>
+            </div>
+            <p class="office-address">${office.address}, ${office.district}, ${office.division}</p>
+            <div class="office-meta">
+                <span>Phone: ${office.contactNumber}</span>
+                <span>Hours: ${office.operatingHours}</span>
+                ${office.distance !== undefined ? `<span>Distance: ${office.distance} km</span>` : ""}
+            </div>
+            <p class="office-services">Services: ${office.services.join(", ")}</p>
+            <div class="office-actions">
+                <button class="button secondary" type="button" data-map-id="${office._id}">View on Map</button>
+                <a class="button secondary" href="https://www.google.com/maps/dir/${office.latitude},${office.longitude}" target="_blank" rel="noopener">Get Directions</a>
+            </div>
+        </div>
+    `).join("");
+
+    container.querySelectorAll("[data-map-id]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            focusOfficeOnMap(btn.getAttribute("data-map-id"));
+        });
+    });
+};
+
+const renderMapMarkers = (offices) => {
+    if (!officesMap || !window.google || !window.google.maps) {
+        return;
+    }
+
+    clearMarkers();
+
+    const bounds = new google.maps.LatLngBounds();
+
+    offices.forEach((office) => {
+        const position = { lat: office.latitude, lng: office.longitude };
+
+        const marker = new google.maps.Marker({
+            position,
+            map: officesMap,
+            title: office.name
+        });
+
+        const infoWindow = new google.maps.InfoWindow({
+            content: `
+                <div style="font-size:13px;min-width:180px;">
+                    <strong>${office.name}</strong><br>
+                    <em>${office.officeType}</em><br>
+                    ${office.address}<br>
+                    Phone: ${office.contactNumber}
+                </div>
+            `
+        });
+
+        marker.addListener("click", () => {
+            infoWindow.open(officesMap, marker);
+        });
+
+        officesMarkers.push(marker);
+        bounds.extend(position);
+    });
+
+    if (offices.length > 0) {
+        officesMap.fitBounds(bounds);
+    }
+};
+
+const clearMarkers = () => {
+    officesMarkers.forEach((marker) => marker.setMap(null));
+    officesMarkers = [];
+};
+
+const focusOfficeOnMap = (officeId) => {
+    const office = allOffices.find((o) => o._id === officeId);
+
+    if (!office || !officesMap) {
+        return;
+    }
+
+    officesMap.setCenter({ lat: office.latitude, lng: office.longitude });
+    officesMap.setZoom(15);
+
+    // Find and click the marker
+    const markerIndex = allOffices.indexOf(office);
+    if (markerIndex >= 0 && officesMarkers[markerIndex]) {
+        google.maps.event.trigger(officesMarkers[markerIndex], "click");
+    }
+};
+
 const logout = async () => {
     try {
         await apiRequest("/api/auth/logout", {
@@ -891,6 +1474,21 @@ const render = async () => {
 
     if (path === routes.documents) {
         await renderDocuments();
+        return;
+    }
+
+    if (path === routes.schemes) {
+        await renderSchemes();
+        return;
+    }
+
+    if (path.startsWith("/schemes/")) {
+        await renderSchemeDetail();
+        return;
+    }
+
+    if (path === routes.offices) {
+        await renderOffices();
         return;
     }
 
