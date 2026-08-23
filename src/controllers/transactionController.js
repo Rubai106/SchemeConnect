@@ -28,6 +28,25 @@ const mockBkashGatewayCall = () => {
     };
 };
 
+const getUtilizedBudget = async (schemeId) => {
+    const result = await Transaction.aggregate([
+        {
+            $match: {
+                scheme: schemeId,
+                status: TRANSACTION_STATUS.SUCCESSFUL
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                utilized: { $sum: "$amount" }
+            }
+        }
+    ]);
+
+    return result.length > 0 ? result[0].utilized : 0;
+};
+
 // FR 3.5 / 3.6 / 3.7 — Initiate, verify, and record a disbursement
 const disburseFund = asyncHandler(async (req, res) => {
     const missingFields = getMissingFields(req.body, requiredDisburseFields);
@@ -50,11 +69,18 @@ const disburseFund = asyncHandler(async (req, res) => {
         throw createError("Disbursement amount must be greater than zero", 400);
     }
 
+    const disbursementAmount = Number(req.body.amount);
+    const utilizedBudget = await getUtilizedBudget(scheme._id);
+
+    if (utilizedBudget + disbursementAmount > scheme.allocatedBudget) {
+        throw createError("Disbursement exceeds remaining scheme budget", 400);
+    }
+
     let transaction = await Transaction.create({
         scheme: scheme._id,
         beneficiaryName: req.body.beneficiaryName.trim(),
         beneficiaryPhone: req.body.beneficiaryPhone.trim(),
-        amount: Number(req.body.amount),
+        amount: disbursementAmount,
         initiatedBy: req.user.userId,
         status: TRANSACTION_STATUS.PENDING
     });

@@ -23,29 +23,32 @@ const getMissingFields = (body, fields) => {
 
 // FR 3.1 — Administrator creates a new welfare scheme
 const createScheme = asyncHandler(async (req, res) => {
-    const missingFields = getMissingFields(req.body, requiredCreateFields);
+    const schemeData = { ...req.body };
+    delete schemeData.status;
+
+    const missingFields = getMissingFields(schemeData, requiredCreateFields);
 
     if (missingFields.length > 0) {
         throw createError(`Missing required fields: ${missingFields.join(", ")}`, 400);
     }
 
-    if (!Object.values(SCHEME_CATEGORY).includes(req.body.category)) {
+    if (!Object.values(SCHEME_CATEGORY).includes(schemeData.category)) {
         throw createError("Invalid scheme category", 400);
     }
 
-    if (Number(req.body.benefitAmount) < 0 || Number(req.body.allocatedBudget) < 0) {
+    if (Number(schemeData.benefitAmount) < 0 || Number(schemeData.allocatedBudget) < 0) {
         throw createError("Benefit amount and allocated budget must be positive numbers", 400);
     }
 
     const scheme = await Scheme.create({
-        name: req.body.name.trim(),
-        category: req.body.category,
-        description: (req.body.description || "").trim(),
-        eligibilityCriteria: req.body.eligibilityCriteria.trim(),
-        benefitAmount: Number(req.body.benefitAmount),
-        allocatedBudget: Number(req.body.allocatedBudget),
-        applicationDeadline: req.body.applicationDeadline,
-        lowBudgetThresholdPercent: req.body.lowBudgetThresholdPercent || 15,
+        name: schemeData.name.trim(),
+        category: schemeData.category,
+        description: (schemeData.description || "").trim(),
+        eligibilityCriteria: schemeData.eligibilityCriteria.trim(),
+        benefitAmount: Number(schemeData.benefitAmount),
+        allocatedBudget: Number(schemeData.allocatedBudget),
+        applicationDeadline: schemeData.applicationDeadline,
+        lowBudgetThresholdPercent: schemeData.lowBudgetThresholdPercent || 15,
         createdBy: req.user.userId
     });
 

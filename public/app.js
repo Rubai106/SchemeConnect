@@ -9,7 +9,9 @@ const routes = {
     login: "/login",
     register: "/register",
     dashboard: "/dashboard",
-    schemeStudio: "/scheme-studio"
+    schemeStudio: "/scheme-studio",
+    staff: "/staff",
+    finance: "/finance"
 };
 
 let currentUser = null;
@@ -74,14 +76,17 @@ const setPage = (content, activePage = "") => {
                             </nav>
                         `
                         : `
-                        
                             <nav class="nav" aria-label="Primary navigation">
                                 <a href="/dashboard" data-link class="${activePage === "dashboard" ? "active" : ""}">Home</a>
 
                                 ${
-                                    currentUser && ["Administrator", "Finance Officer", "Auditor"].includes(currentUser.role)
-                                        ? `<a href="/scheme-studio" data-link class="${activePage === "scheme-studio" ? "active" : ""}">Scheme Studio</a>`
-                                        : `<span aria-disabled="true">Documents</span>`
+                                    currentUser
+                                        ? `
+                                            ${currentUser.role === "Administrator" ? `<a href="/staff" data-link class="${activePage === "staff" ? "active" : ""}">Staff Management</a>` : ""}
+                                            <a href="/finance" data-link class="${activePage === "finance" ? "active" : ""}">Finance Dashboard</a>
+                                            <a href="/scheme-studio" data-link class="${activePage === "scheme-studio" ? "active" : ""}">Scheme Studio</a>
+                                        `
+                                        : ""
                                 }
 
                                 <span aria-disabled="true">Offices</span>
@@ -91,7 +96,7 @@ const setPage = (content, activePage = "") => {
                                 ${
                                     currentUser
                                         ? `
-                                            <span>${currentUser.fullName}</span>
+                                            <span>${currentUser.fullName} · ${currentUser.role}</span>
                                             <button class="logout-link" id="logoutButton" type="button">Logout</button>
                                         `
                                         : ""
@@ -163,11 +168,16 @@ const loadCurrentUser = async () => {
 //     return true;
 // };
 
-const requireAuth = async (allowedRoles = ["Citizen"]) => {
+const requireAuth = async (allowedRoles = ["Citizen", "Administrator", "Finance Officer", "Verification Officer", "Auditor"]) => {
     const user = await loadCurrentUser();
 
-    if (!user || !allowedRoles.includes(user.role)) {
+    if (!user) {
         navigate(routes.login);
+        return false;
+    }
+
+    if (allowedRoles && !allowedRoles.includes(user.role)) {
+        navigate(routes.dashboard);
         return false;
     }
 
@@ -229,7 +239,9 @@ const renderLogin = () => {
 
             setToken(result.data.token);
             currentUser = result.data.user;
-            navigate(routes.dashboard);
+
+            navigate(routes.staff);
+            return;
         } catch (error) {
             showMessage(error.message);
         } finally {
@@ -335,14 +347,14 @@ const renderRegister = () => {
 };
 
 const renderDashboard = async () => {
-    if (!(await requireAuth())) {
+    if (!(await requireAuth(["Citizen", "Administrator", "Finance Officer", "Verification Officer", "Auditor"]))) {
         return;
     }
 
     setPage(
         `
         <section class="page-title">
-            <h1>Citizen Dashboard</h1>
+            <h1>${currentUser.role === "Administrator" ? "Admin Dashboard" : currentUser.role === "Finance Officer" ? "Finance Dashboard" : "Citizen Dashboard"}</h1>
             <p>Welcome, ${currentUser.fullName}. Manage your SchemeConnect account.</p>
         </section>
 
@@ -350,12 +362,13 @@ const renderDashboard = async () => {
             <div class="card summary-card">
                 <h2>Account Information</h2>
                 <p>${currentUser.email}</p>
+                <p>${currentUser.role}</p>
                 <p>${currentUser.division}, ${currentUser.district}</p>
             </div>
 
             <div class="card summary-card">
                 <h2>Available Services</h2>
-                <p>Your citizen services will appear here as features are completed.</p>
+                <p>${currentUser.role === "Administrator" ? "Staff management, scheme control, and oversight are available." : currentUser.role === "Finance Officer" ? "Financial disbursement and budget monitoring are available." : "Your citizen services will appear here as features are completed."}</p>
             </div>
         </section>
         `,
@@ -363,6 +376,227 @@ const renderDashboard = async () => {
     );
 };
 
+const renderStaffManagement = async () => {
+    if (!(await requireAuth(["Administrator"]))) {
+        return;
+    }
+
+    setPage(
+        `
+        <section class="page-title">
+            <h1>Staff Management</h1>
+            <p>Create and manage administrator and finance staff accounts.</p>
+        </section>
+
+        <section class="studio-grid staff-layout">
+            <div class="card">
+                <h2>Create Staff Account</h2>
+                <div id="staffFormMessage" class="message error" hidden></div>
+                <form id="staffForm">
+                    <div class="form-row">
+                        <label for="staffFullName">Full Name</label>
+                        <input id="staffFullName" name="fullName" required>
+                    </div>
+                    <div class="form-row">
+                        <label for="staffEmail">Email</label>
+                        <input id="staffEmail" name="email" type="email" required>
+                    </div>
+                    <div class="form-row">
+                        <label for="staffPassword">Password</label>
+                        <input id="staffPassword" name="password" type="password" required>
+                    </div>
+                    <div class="form-row">
+                        <label for="staffRole">Role</label>
+                        <select id="staffRole" name="role">
+                            <option value="Administrator">Administrator</option>
+                            <option value="Finance Officer">Finance Officer</option>
+                            <option value="Verification Officer">Verification Officer</option>
+                            <option value="Auditor">Auditor</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label for="staffDivision">Division</label>
+                        <input id="staffDivision" name="division" required>
+                    </div>
+                    <div class="form-row">
+                        <label for="staffDistrict">District</label>
+                        <input id="staffDistrict" name="district" required>
+                    </div>
+                    <div class="actions">
+                        <button class="button primary" type="submit">Create Staff</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2>Staff Directory</h2>
+                <div id="staffList"><p class="empty-note">Loading staff…</p></div>
+            </div>
+        </section>
+        `,
+        "staff"
+    );
+
+    const renderStaffList = async () => {
+        const staffList = document.getElementById("staffList");
+
+        try {
+            const result = await apiRequest("/api/auth/staff");
+            const users = result.data.users;
+
+            if (!users.length) {
+                staffList.innerHTML = `<p class="empty-note">No staff accounts found.</p>`;
+                return;
+            }
+
+            staffList.innerHTML = `
+                <div class="table-scroll">
+                    <table class="ledger-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Division</th>
+                                <th>District</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${users.map((user) => `
+                                <tr>
+                                    <td>${user.fullName}</td>
+                                    <td>${user.email}</td>
+                                    <td><span class="badge badge-success">${user.role}</span></td>
+                                    <td>${user.division}</td>
+                                    <td>${user.district}</td>
+                                </tr>
+                            `).join("")}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        } catch (error) {
+            staffList.innerHTML = `<p class="empty-note">Unable to load staff.</p>`;
+        }
+    };
+
+    document.getElementById("staffForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const form = event.target;
+        const button = form.querySelector("button");
+        const messageBox = document.getElementById("staffFormMessage");
+
+        button.disabled = true;
+        button.textContent = "Creating...";
+        messageBox.hidden = true;
+
+        try {
+            await apiRequest("/api/auth/staff", {
+                method: "POST",
+                body: JSON.stringify({
+                    fullName: form.fullName.value.trim(),
+                    email: form.email.value.trim(),
+                    password: form.password.value,
+                    role: form.role.value,
+                    division: form.division.value.trim(),
+                    district: form.district.value.trim()
+                })
+            });
+
+            form.reset();
+            await renderStaffList();
+            messageBox.className = "message success";
+            messageBox.textContent = "Staff account created successfully.";
+            messageBox.hidden = false;
+        } catch (error) {
+            messageBox.className = "message error";
+            messageBox.textContent = error.message;
+            messageBox.hidden = false;
+        } finally {
+            button.disabled = false;
+            button.textContent = "Create Staff";
+        }
+    });
+
+    await renderStaffList();
+};
+
+const renderFinanceDashboard = async () => {
+    if (!(await requireAuth())) {
+        return;
+    }
+
+    setPage(
+        `
+        <section class="page-title">
+            <h1>Finance Dashboard</h1>
+            <p>Track disbursements, budgets, and transaction activity.</p>
+        </section>
+
+        <section class="dashboard-grid">
+            <div class="card summary-card">
+                <h2>Overview</h2>
+                <p>Monitoring active welfare schemes and expenditures.</p>
+            </div>
+            <div class="card summary-card">
+                <h2>Access Level</h2>
+                <p>${currentUser.role}</p>
+            </div>
+        </section>
+
+        <section class="card" style="margin-top: 18px;">
+            <div class="ledger-header">
+                <h2>Finance Ledger</h2>
+                <select id="financeStatusFilter">
+                    <option value="">All statuses</option>
+                    <option value="Successful">Successful</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Failed">Failed</option>
+                </select>
+            </div>
+            <table class="ledger-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Scheme</th>
+                        <th>Beneficiary</th>
+                        <th>Amount</th>
+                        <th>Reference</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="financeLedgerBody">
+                    <tr><td colspan="6" class="empty-note">Loading ledger…</td></tr>
+                </tbody>
+            </table>
+        </section>
+        `,
+        "finance"
+    );
+
+    const loadFinanceLedger = async (statusFilter = "") => {
+        const tableBody = document.getElementById("financeLedgerBody");
+
+        if (!tableBody) {
+            return;
+        }
+
+        try {
+            const query = statusFilter ? `?status=${statusFilter}` : "";
+            const result = await apiRequest(`/api/transactions${query}`);
+            tableBody.innerHTML = renderLedgerRows(result.data.ledger);
+        } catch (error) {
+            tableBody.innerHTML = `<tr><td colspan="6" class="empty-note">Unable to load ledger.</td></tr>`;
+        }
+    };
+
+    document.getElementById("financeStatusFilter").addEventListener("change", (event) => {
+        loadFinanceLedger(event.target.value);
+    });
+
+    await loadFinanceLedger();
+};
 
 
 
@@ -397,7 +631,7 @@ const loadBudgetSummary = async (schemeId, targetElement) => {
     }
 };
 
-const renderSchemeCards = (schemes) => {
+const renderSchemeCards = (schemes, canEdit = false) => {
     if (schemes.length === 0) {
         return `<p class="empty-note">No schemes yet. Create one on the left to get started.</p>`;
     }
@@ -417,6 +651,9 @@ const renderSchemeCards = (schemes) => {
                 <div class="budget-box" id="budget-${scheme._id}">
                     <p class="budget-meta">Loading budget…</p>
                 </div>
+                ${canEdit ? `<button class="button secondary edit-scheme-button" type="button" data-scheme-id="${scheme._id}">
+                    Edit
+                </button>` : ""}
                 <button class="button secondary select-scheme-button" type="button" data-scheme-id="${scheme._id}" data-scheme-name="${scheme.name}" data-scheme-status="${scheme.status}">
                     Select for Disbursement
                 </button>
@@ -547,6 +784,12 @@ const renderDisbursementPanel = () => {
 };
 
 const attachSchemeCardListeners = () => {
+    document.querySelectorAll(".edit-scheme-button").forEach((button) => {
+        button.addEventListener("click", () => {
+            startSchemeEdit(button.getAttribute("data-scheme-id"));
+        });
+    });
+
     document.querySelectorAll(".select-scheme-button").forEach((button) => {
         button.addEventListener("click", () => {
             selectedScheme = {
@@ -563,12 +806,52 @@ const attachSchemeCardListeners = () => {
     });
 };
 
-const loadSchemeList = async () => {
+const resetSchemeForm = (form) => {
+    form.reset();
+    form.schemeId.value = "";
+    form.status.value = "Draft";
+    form.status.disabled = true;
+    document.getElementById("statusField").hidden = true;
+    document.getElementById("cancelSchemeEdit").hidden = true;
+    form.querySelector('button[type="submit"]').textContent = "Create Scheme";
+};
+
+const startSchemeEdit = async (schemeId) => {
+    const form = document.getElementById("schemeForm");
+    const messageBox = document.getElementById("schemeFormMessage");
+
+    try {
+        const result = await apiRequest(`/api/schemes/${schemeId}`);
+        const scheme = result.data.scheme;
+
+        form.schemeId.value = scheme._id;
+        form.name.value = scheme.name;
+        form.category.value = scheme.category;
+        form.applicationDeadline.value = new Date(scheme.applicationDeadline).toISOString().split("T")[0];
+        form.benefitAmount.value = scheme.benefitAmount;
+        form.allocatedBudget.value = scheme.allocatedBudget;
+        form.eligibilityCriteria.value = scheme.eligibilityCriteria;
+        form.status.value = scheme.status;
+        form.status.disabled = false;
+        document.getElementById("statusField").hidden = false;
+        document.getElementById("cancelSchemeEdit").hidden = false;
+        form.querySelector('button[type="submit"]').textContent = "Update Scheme";
+        messageBox.hidden = true;
+        form.scrollIntoView({ behavior: "smooth", block: "start" });
+        form.name.focus();
+    } catch (error) {
+        messageBox.className = "message error";
+        messageBox.textContent = error.message;
+        messageBox.hidden = false;
+    }
+};
+
+const loadSchemeList = async (canEdit = currentUser && currentUser.role === "Administrator") => {
     const listElement = document.getElementById("schemeList");
 
     try {
         const result = await apiRequest("/api/schemes");
-        listElement.innerHTML = renderSchemeCards(result.data.schemes);
+        listElement.innerHTML = renderSchemeCards(result.data.schemes, canEdit);
         attachSchemeCardListeners();
     } catch (error) {
         listElement.innerHTML = `<p class="empty-note">Unable to load schemes.</p>`;
@@ -576,13 +859,14 @@ const loadSchemeList = async () => {
 };
 
 const renderSchemeStudio = async () => {
-    if (!(await requireAuth(schemeStudioRoles))) {
+    if (!(await requireAuth())) {
         return;
     }
 
     selectedScheme = null;
 
     const canCreateScheme = currentUser.role === "Administrator";
+    const canEdit = currentUser.role === "Administrator";
 
     setPage(
         `
@@ -596,6 +880,7 @@ const renderSchemeStudio = async () => {
                 <h2>Create New Scheme</h2>
                 <div id="schemeFormMessage" class="message error" hidden></div>
                 <form id="schemeForm">
+                    <input type="hidden" id="schemeId" name="schemeId" value="">
                     <div class="form-row full">
                         <label for="name">Scheme Name</label>
                         <input id="name" name="name" required>
@@ -622,8 +907,18 @@ const renderSchemeStudio = async () => {
                         <label for="eligibilityCriteria">Eligibility Criteria</label>
                         <input id="eligibilityCriteria" name="eligibilityCriteria" required placeholder="e.g. Household income below 15,000 BDT/month">
                     </div>
+                    <div class="form-row" id="statusField" hidden>
+                        <label for="status">Status</label>
+                        <select id="status" name="status" disabled>
+                            <option value="Draft">Draft</option>
+                            <option value="Active">Active</option>
+                            <option value="Paused">Paused</option>
+                            <option value="Closed">Closed</option>
+                        </select>
+                    </div>
                     <div class="actions">
                         <button class="button primary" type="submit">Create Scheme</button>
+                        <button class="button secondary" id="cancelSchemeEdit" type="button" hidden>Cancel</button>
                     </div>
                 </form>
             </div>
@@ -667,7 +962,7 @@ const renderSchemeStudio = async () => {
     );
 
     renderDisbursementPanel();
-    loadSchemeList();
+    loadSchemeList(canEdit);
     loadLedger();
 
     document.getElementById("ledgerStatusFilter").addEventListener("change", (event) => {
@@ -675,40 +970,52 @@ const renderSchemeStudio = async () => {
     });
 
     if (canCreateScheme) {
-        document.getElementById("schemeForm").addEventListener("submit", async (event) => {
+        const form = document.getElementById("schemeForm");
+        const cancelButton = document.getElementById("cancelSchemeEdit");
+
+        cancelButton.addEventListener("click", () => {
+            resetSchemeForm(form);
+        });
+
+        form.addEventListener("submit", async (event) => {
             event.preventDefault();
 
-            const form = event.target;
-            const button = form.querySelector("button");
+            const button = form.querySelector('button[type="submit"]');
             const messageBox = document.getElementById("schemeFormMessage");
+            const schemeId = form.schemeId.value.trim();
+            const isEditing = Boolean(schemeId);
+            const payload = {
+                name: form.name.value.trim(),
+                category: form.category.value,
+                eligibilityCriteria: form.eligibilityCriteria.value.trim(),
+                benefitAmount: Number(form.benefitAmount.value),
+                allocatedBudget: Number(form.allocatedBudget.value),
+                applicationDeadline: form.applicationDeadline.value
+            };
+
+            if (isEditing) {
+                payload.status = form.status.value;
+            }
 
             button.disabled = true;
-            button.textContent = "Creating...";
+            button.textContent = isEditing ? "Updating..." : "Creating...";
             messageBox.hidden = true;
 
             try {
-                await apiRequest("/api/schemes", {
-                    method: "POST",
-                    body: JSON.stringify({
-                        name: form.name.value.trim(),
-                        category: form.category.value,
-                        eligibilityCriteria: form.eligibilityCriteria.value.trim(),
-                        benefitAmount: Number(form.benefitAmount.value),
-                        allocatedBudget: Number(form.allocatedBudget.value),
-                        applicationDeadline: form.applicationDeadline.value,
-                        status: "Active"
-                    })
+                await apiRequest(isEditing ? `/api/schemes/${schemeId}` : "/api/schemes", {
+                    method: isEditing ? "PUT" : "POST",
+                    body: JSON.stringify(payload)
                 });
 
-                form.reset();
-                loadSchemeList();
+                resetSchemeForm(form);
+                loadSchemeList(canEdit);
             } catch (error) {
                 messageBox.className = "message error";
                 messageBox.textContent = error.message;
                 messageBox.hidden = false;
             } finally {
                 button.disabled = false;
-                button.textContent = "Create Scheme";
+                button.textContent = form.schemeId.value ? "Update Scheme" : "Create Scheme";
             }
         });
     }
@@ -760,6 +1067,16 @@ const render = async () => {
 
     if (path === routes.register) {
         renderRegister();
+        return;
+    }
+
+    if (path === routes.staff) {
+        await renderStaffManagement();
+        return;
+    }
+
+    if (path === routes.finance) {
+        await renderFinanceDashboard();
         return;
     }
 

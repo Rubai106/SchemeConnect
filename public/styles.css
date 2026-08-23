@@ -628,6 +628,10 @@ select:focus {
     align-items: start;
 }
 
+.staff-layout {
+    grid-template-columns: minmax(280px, 1fr) minmax(0, 2fr);
+}
+
 .scheme-card {
     padding: 20px;
 
@@ -830,6 +834,10 @@ select:focus {
     font-family: monospace;
 
     font-size: 12px;
+}
+
+.table-scroll {
+    overflow-x: auto;
 }
 
 @media (max-width: 900px) {

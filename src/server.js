@@ -6,7 +6,7 @@ dns.setServers(["8.8.8.8", "8.8.4.4"]);
 const express = require("express");
 const dotenv = require("dotenv");
 const path = require("path");
-const connectDB = require("./config/db");
+const { connectDB } = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const schemeRoutes = require("./routes/schemeRoutes");
 const transactionRoutes = require("./routes/transactionRoutes");
@@ -31,7 +31,7 @@ app.get("/", (req, res) => {
     res.send("SchemeConnect API is running...");
 });
 
-app.get(["/login", "/register", "/dashboard", "/scheme-studio"], (req, res) => {
+app.get(["/login", "/register", "/dashboard", "/scheme-studio", "/staff", "/finance"], (req, res) => {
     res.sendFile(path.join(__dirname, "../public/index.html"));
 });
 
