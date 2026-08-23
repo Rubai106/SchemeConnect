@@ -1,18 +1,6 @@
 const mongoose = require("mongoose");
-
-// Easy to modify: scheme categories
-const SCHEME_CATEGORIES = [
-    "Agriculture",
-    "Education",
-    "Healthcare",
-    "Disability",
-    "Women",
-    "SME",
-    "Housing"
-];
-
-// Easy to modify: scheme statuses
-const SCHEME_STATUSES = ["Open", "Closed"];
+const SCHEME_CATEGORY = require("../constants/schemeCategory");
+const SCHEME_STATUS = require("../constants/schemeStatus");
 
 const schemeSchema = new mongoose.Schema(
 {
@@ -25,15 +13,17 @@ const schemeSchema = new mongoose.Schema(
     category: {
         type: String,
         required: true,
-        enum: SCHEME_CATEGORIES
+        enum: Object.values(SCHEME_CATEGORY)
     },
 
     description: {
         type: String,
-        required: true,
-        trim: true
+        trim: true,
+        default: ""
     },
 
+    // Structured eligibility criteria — used by Citizen Opportunity Explorer
+    // Simple embedded object, easy to modify during the exam
     eligibilityCriteria: {
         minimumIncome: {
             type: Number,
@@ -55,12 +45,36 @@ const schemeSchema = new mongoose.Schema(
         minimumFamilySize: {
             type: Number,
             default: null
+        },
+        // Extended criteria for future application matching
+        occupationTypes: {
+            type: [String],
+            default: []
+        },
+        minEducation: {
+            type: String,
+            trim: true,
+            default: ""
+        },
+        maxFamilySize: {
+            type: Number,
+            default: null
+        },
+        eligibleDistricts: {
+            type: [String],
+            default: []
         }
+    },
+
+    benefitAmount: {
+        type: Number,
+        min: 0,
+        default: null
     },
 
     applicationDeadline: {
         type: Date,
-        required: true
+        default: null
     },
 
     requiredDocuments: {
@@ -68,16 +82,29 @@ const schemeSchema = new mongoose.Schema(
         default: []
     },
 
-    benefitAmount: {
-        type: Number,
-        required: true,
-        min: 0
+    // Scheme lifecycle status — shared with Scheme Configuration Studio
+    status: {
+        type: String,
+        enum: Object.values(SCHEME_STATUS),
+        default: SCHEME_STATUS.DRAFT
     },
 
-    applicationStatus: {
-        type: String,
-        required: true,
-        enum: SCHEME_STATUSES
+    // Budget fields — used by Scheme Configuration Studio (Mahima's feature)
+    allocatedBudget: {
+        type: Number,
+        min: 0,
+        default: 0
+    },
+
+    lowBudgetThresholdPercent: {
+        type: Number,
+        default: 15
+    },
+
+    createdBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null
     }
 },
 {
@@ -85,5 +112,3 @@ const schemeSchema = new mongoose.Schema(
 });
 
 module.exports = mongoose.model("Scheme", schemeSchema);
-module.exports.SCHEME_CATEGORIES = SCHEME_CATEGORIES;
-module.exports.SCHEME_STATUSES = SCHEME_STATUSES;

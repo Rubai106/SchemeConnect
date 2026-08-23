@@ -1,5 +1,6 @@
 const Scheme = require("../models/Scheme");
 const EligibilityProfile = require("../models/EligibilityProfile");
+const SCHEME_STATUS = require("../constants/schemeStatus");
 const asyncHandler = require("../utils/asyncHandler");
 const createError = require("../utils/appError");
 const { sendSuccess } = require("../utils/apiResponse");
@@ -36,6 +37,14 @@ const isEligible = (profile, criteria) => {
         }
     }
 
+    // Check eligible districts list (if scheme specifies a list, citizen's district must be in it)
+    if (criteria.eligibleDistricts && criteria.eligibleDistricts.length > 0) {
+        const normalized = criteria.eligibleDistricts.map((d) => d.toLowerCase());
+        if (!normalized.includes(profile.district.toLowerCase())) {
+            return false;
+        }
+    }
+
     // Check disability requirement
     if (criteria.disabilityRequired === true) {
         if (!profile.disabilityStatus) {
@@ -50,21 +59,31 @@ const isEligible = (profile, criteria) => {
         }
     }
 
+    // Check maximum family size
+    if (criteria.maxFamilySize !== null && criteria.maxFamilySize !== undefined) {
+        if (profile.familySize > criteria.maxFamilySize) {
+            return false;
+        }
+    }
+
     return true;
 };
 
 // ============================================================
-// GET /api/schemes — list all schemes with optional filters
+// GET /api/schemes — list schemes for Citizen browsing
+// Excludes Draft schemes (not visible to citizens)
 // ============================================================
 const getSchemes = asyncHandler(async (req, res) => {
-    const filter = {};
+    const filter = {
+        status: { $ne: SCHEME_STATUS.DRAFT }
+    };
 
     if (req.query.category) {
         filter.category = req.query.category;
     }
 
     if (req.query.status) {
-        filter.applicationStatus = req.query.status;
+        filter.status = req.query.status;
     }
 
     const schemes = await Scheme.find(filter).sort({ applicationDeadline: 1 });
@@ -91,6 +110,7 @@ const getSchemeById = asyncHandler(async (req, res) => {
 
 // ============================================================
 // GET /api/schemes/recommended — schemes the citizen may qualify for
+// Only returns Active schemes
 // ============================================================
 const getRecommendedSchemes = asyncHandler(async (req, res) => {
     const profile = await EligibilityProfile.findOne({ user: req.user.userId });
@@ -102,9 +122,9 @@ const getRecommendedSchemes = asyncHandler(async (req, res) => {
         });
     }
 
-    const openSchemes = await Scheme.find({ applicationStatus: "Open" });
+    const activeSchemes = await Scheme.find({ status: SCHEME_STATUS.ACTIVE });
 
-    const recommended = openSchemes.filter((scheme) => {
+    const recommended = activeSchemes.filter((scheme) => {
         return isEligible(profile, scheme.eligibilityCriteria);
     });
 

@@ -873,10 +873,50 @@ const SCHEME_CATEGORIES = [
     "Housing"
 ];
 
+// Citizen-facing statuses (Draft is excluded from citizen view)
+const SCHEME_STATUSES = ["Active", "Paused", "Closed"];
+
 const categoryOptions = () => {
     return SCHEME_CATEGORIES.map(
         (cat) => `<option value="${cat}">${cat}</option>`
     ).join("");
+};
+
+const statusOptions = () => {
+    return SCHEME_STATUSES.map(
+        (s) => `<option value="${s}">${s}</option>`
+    ).join("");
+};
+
+// Safe formatting helpers for scheme data
+const formatBenefit = (amount) => {
+    if (amount === null || amount === undefined || isNaN(amount)) {
+        return "Not specified";
+    }
+    return `৳${Number(amount).toLocaleString()}`;
+};
+
+const formatDeadline = (dateValue) => {
+    if (!dateValue) {
+        return "Not specified";
+    }
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) {
+        return "Not specified";
+    }
+    return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric"
+    });
+};
+
+// Map scheme status to CSS badge class
+const statusBadgeClass = (status) => {
+    if (status === "Active") return "status-verified";
+    if (status === "Paused") return "status-paused";
+    if (status === "Closed") return "status-rejected";
+    return "status-pending";
 };
 
 // ============================================================
@@ -907,8 +947,7 @@ const renderSchemes = async () => {
                     <label for="schemeStatus">Status</label>
                     <select id="schemeStatus">
                         <option value="">All</option>
-                        <option value="Open">Open</option>
-                        <option value="Closed">Closed</option>
+                        ${statusOptions()}
                     </select>
                 </div>
                 <div class="form-row filter-action">
@@ -978,21 +1017,24 @@ const renderSchemeCards = (schemes) => {
         return;
     }
 
-    container.innerHTML = schemes.map((scheme) => `
+    container.innerHTML = schemes.map((scheme) => {
+        const status = scheme.status || "Closed";
+        return `
         <div class="scheme-item">
             <div class="scheme-header">
                 <h3>${scheme.name}</h3>
-                <span class="scheme-badge status-badge status-${scheme.applicationStatus === "Open" ? "verified" : "rejected"}">${scheme.applicationStatus}</span>
+                <span class="scheme-badge status-badge ${statusBadgeClass(status)}">${status}</span>
             </div>
             <span class="scheme-category">${scheme.category}</span>
-            <p class="scheme-desc">${scheme.description}</p>
+            <p class="scheme-desc">${scheme.description || ""}</p>
             <div class="scheme-meta">
-                <span>Benefit: <strong>৳${scheme.benefitAmount.toLocaleString()}</strong></span>
-                <span>Deadline: <strong>${formatDate(scheme.applicationDeadline)}</strong></span>
+                <span>Benefit: <strong>${formatBenefit(scheme.benefitAmount)}</strong></span>
+                <span>Deadline: <strong>${formatDeadline(scheme.applicationDeadline)}</strong></span>
             </div>
             <button class="button secondary scheme-detail-btn" type="button" data-scheme-id="${scheme._id}">View Details</button>
         </div>
-    `).join("");
+    `;
+    }).join("");
 
     container.querySelectorAll("[data-scheme-id]").forEach((btn) => {
         btn.addEventListener("click", () => {
@@ -1022,21 +1064,24 @@ const loadRecommended = async () => {
             return;
         }
 
-        container.innerHTML = data.schemes.map((scheme) => `
+        container.innerHTML = data.schemes.map((scheme) => {
+            const status = scheme.status || "Closed";
+            return `
             <div class="recommended-item">
                 <div class="scheme-header">
                     <h3>${scheme.name}</h3>
                     <span class="eligible-badge">You may be eligible</span>
                 </div>
                 <span class="scheme-category">${scheme.category}</span>
-                <p class="scheme-desc">${scheme.description}</p>
+                <p class="scheme-desc">${scheme.description || ""}</p>
                 <div class="scheme-meta">
-                    <span>Benefit: <strong>৳${scheme.benefitAmount.toLocaleString()}</strong></span>
-                    <span>Deadline: <strong>${formatDate(scheme.applicationDeadline)}</strong></span>
+                    <span>Benefit: <strong>${formatBenefit(scheme.benefitAmount)}</strong></span>
+                    <span>Deadline: <strong>${formatDeadline(scheme.applicationDeadline)}</strong></span>
                 </div>
                 <button class="button secondary scheme-detail-btn" type="button" data-scheme-id="${scheme._id}">View Details</button>
             </div>
-        `).join("");
+        `;
+        }).join("");
 
         container.querySelectorAll("[data-scheme-id]").forEach((btn) => {
             btn.addEventListener("click", () => {
@@ -1112,22 +1157,24 @@ const renderSchemeDetail = async () => {
             ? `<ul class="docs-list">${scheme.requiredDocuments.map((d) => `<li>${d}</li>`).join("")}</ul>`
             : "<p class='muted-text'>No documents specified.</p>";
 
+        const detailStatus = scheme.status || "Closed";
+
         document.querySelector(".detail-card").innerHTML = `
             <div class="scheme-header">
                 <h2>${scheme.name}</h2>
-                <span class="scheme-badge status-badge status-${scheme.applicationStatus === "Open" ? "verified" : "rejected"}">${scheme.applicationStatus}</span>
+                <span class="scheme-badge status-badge ${statusBadgeClass(detailStatus)}">${detailStatus}</span>
             </div>
             <span class="scheme-category">${scheme.category}</span>
-            <p class="scheme-desc">${scheme.description}</p>
+            <p class="scheme-desc">${scheme.description || ""}</p>
 
             <div class="detail-grid">
                 <div class="detail-section">
                     <h3>Benefit Amount</h3>
-                    <p>৳${scheme.benefitAmount.toLocaleString()}</p>
+                    <p>${formatBenefit(scheme.benefitAmount)}</p>
                 </div>
                 <div class="detail-section">
                     <h3>Application Deadline</h3>
-                    <p>${formatDate(scheme.applicationDeadline)}</p>
+                    <p>${formatDeadline(scheme.applicationDeadline)}</p>
                 </div>
             </div>
 
