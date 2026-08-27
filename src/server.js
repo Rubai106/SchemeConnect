@@ -36,10 +36,9 @@ app.get("/", (req, res) => {
     res.send("SchemeConnect API is running...");
 });
 
-app.get(["/login", "/register", "/dashboard", "/eligibility"], (req, res) => {
+app.get(["/login", "/register", "/dashboard", "/eligibility", "/console", "/console/beneficiaries", "/console/analytics", "/console/audit-log", "/console/circulars"], (req, res) => {
     res.sendFile(path.join(__dirname, "../public/index.html"));
 });
-
 app.use(notFound);
 app.use(errorHandler);
 

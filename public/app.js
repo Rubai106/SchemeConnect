@@ -10,7 +10,6 @@ const routes = {
     register: "/register",
     dashboard: "/dashboard",
     eligibility: "/eligibility",
-    // Added for the Administrator console (Member 4's four features)
     console: "/console",
     consoleBeneficiaries: "/console/beneficiaries",
     consoleAnalytics: "/console/analytics",
@@ -20,9 +19,6 @@ const routes = {
 
 let currentUser = null;
 
-// Display-only label — the actual stored/compared role stays "Administrator"
-// everywhere (JWT, database, ROLES constant); this just controls what text
-// shows up in the UI.
 const roleDisplayLabel = (role) => (role === "Administrator" ? "Govt. Administrator" : role);
 
 const apiRequest = async (url, options = {}) => {
@@ -187,10 +183,6 @@ const requireAuth = async () => {
     return true;
 };
 
-// New: role-gate for the Administrator console, kept separate from
-// requireAuth() above so Citizen pages (dashboard, eligibility) are
-// untouched. Pass an array of role strings that should be let through -
-// anyone else gets redirected to /login.
 const requireRole = async (allowedRoles) => {
     const user = await loadCurrentUser();
 
@@ -257,8 +249,6 @@ const renderLogin = () => {
             setToken(result.data.token);
             currentUser = result.data.user;
 
-            // Route by role: Administrators (and other staff roles) land in
-            // the console, Citizens go to the existing citizen dashboard.
             if (currentUser.role === "Citizen") {
                 navigate(routes.dashboard);
             } else {
@@ -635,12 +625,6 @@ const deleteProfile = async () => {
     }
 };
 
-// ===========================================================================
-// ADMINISTRATOR CONSOLE — Member 4's four features
-// Beneficiary Lifecycle Management / Welfare Performance Intelligence /
-// Governance Audit Center / Official Circular Synchronization
-// ===========================================================================
-
 const STATUS_LABELS = {
     pending: "Pending",
     under_review: "Under Review",
@@ -655,8 +639,6 @@ const timeAgo = (dateString) => {
     if (days < 14) return `${days} days ago`;
     return `${Math.floor(days / 7)} week(s) ago`;
 };
-
-// --- Beneficiary Records -----------------------------------------------
 
 const renderConsoleBeneficiaries = async () => {
     if (!(await requireRole(["Administrator", "Auditor", "Verification Officer"]))) {
@@ -878,7 +860,6 @@ const renderConsoleBeneficiaries = async () => {
         document.getElementById("registerModalBackdrop").hidden = true;
     });
 
-    // Click outside the modal box (on the dark backdrop itself) also closes it
     document.getElementById("registerModalBackdrop").addEventListener("click", (event) => {
         if (event.target.id === "registerModalBackdrop") {
             event.target.hidden = true;
@@ -908,6 +889,7 @@ const renderConsoleBeneficiaries = async () => {
 
             form.reset();
             document.getElementById("registerModalBackdrop").hidden = true;
+            document.getElementById("messageBox").hidden = true;
             await loadBeneficiaries();
         } catch (error) {
             showMessage(error.message);
@@ -917,10 +899,6 @@ const renderConsoleBeneficiaries = async () => {
         }
     });
 
-    // NOTE: these three listeners were previously (incorrectly) nested inside
-    // the registerBeneficiaryForm submit handler above, meaning they only got
-    // attached after a successful Register submission. Moved out here so
-    // they're always wired up as soon as the page renders.
     document.getElementById("closeEditModal").addEventListener("click", () => {
         document.getElementById("editModalBackdrop").hidden = true;
     });
@@ -955,6 +933,7 @@ const renderConsoleBeneficiaries = async () => {
             });
 
             document.getElementById("editModalBackdrop").hidden = true;
+            document.getElementById("messageBox").hidden = true;
             await loadBeneficiaries();
         } catch (error) {
             showMessage(error.message);
@@ -966,8 +945,6 @@ const renderConsoleBeneficiaries = async () => {
 
     await loadBeneficiaries();
 };
-
-// --- Welfare Performance Intelligence -----------------------------------
 
 const renderConsoleAnalytics = async () => {
     if (!(await requireRole(["Administrator", "Auditor"]))) {
@@ -1117,7 +1094,6 @@ const renderConsoleAnalytics = async () => {
         const processing = await apiRequest("/api/analytics/processing-time");
         document.getElementById("statProcessing").textContent = `${processing.data.averageProcessingTimeDays} days`;
     } catch (error) {
-        // non-fatal, leave as "-"
     }
 
     try {
@@ -1126,7 +1102,6 @@ const renderConsoleAnalytics = async () => {
             regions.data.map((r) => `<tr><td>${r.region}</td><td>${r.totalBeneficiaries}</td></tr>`).join("") ||
             `<tr><td colspan="2">No data yet.</td></tr>`;
     } catch (error) {
-        // non-fatal
     }
 
     try {
@@ -1146,7 +1121,6 @@ const renderConsoleAnalytics = async () => {
                 )
                 .join("") || `<tr><td colspan="5">No schemes configured yet.</td></tr>`;
     } catch (error) {
-        // non-fatal
     }
 
     try {
@@ -1156,7 +1130,6 @@ const renderConsoleAnalytics = async () => {
                 .map((p) => `<tr><td>${p.schemeName || "-"}</td><td>${p.applicationCount}</td></tr>`)
                 .join("") || `<tr><td colspan="2">No applications yet.</td></tr>`;
     } catch (error) {
-        // non-fatal
     }
 
     let schemeAnalyticsData = null;
@@ -1249,8 +1222,6 @@ const renderConsoleAnalytics = async () => {
     });
 };
 
-// --- Governance Audit Center ---------------------------------------------
-
 const renderConsoleAuditLog = async () => {
     if (!(await requireRole(["Administrator", "Auditor"]))) {
         return;
@@ -1322,9 +1293,9 @@ const renderConsoleAuditLog = async () => {
                             <tr>
                                 <td>${new Date(log.timestamp).toLocaleString()}</td>
                                 <td>${log.action}</td>
-                                <td>${log.performedBy}</td>
-                                <td>${log.role}</td>
-                                <td>${log.targetType || ""}${log.targetId ? " · " + log.targetId : ""}</td>
+                                <td>${roleDisplayLabel(log.performedBy)}</td>
+                                <td>${roleDisplayLabel(log.role)}</td>
+                                <td>${log.targetType || ""}</td>
                                 <td>${log.details || ""}</td>
                             </tr>
                         `
@@ -1353,8 +1324,6 @@ const renderConsoleAuditLog = async () => {
 
     await loadAuditLogs();
 };
-
-// --- Official Circular Synchronization -----------------------------------
 
 const renderConsoleCirculars = async () => {
     if (!(await requireRole(["Administrator"]))) {
@@ -1462,7 +1431,6 @@ const logout = async () => {
             method: "POST"
         });
     } catch (error) {
-        // JWT logout is stateless.
     }
 
     clearToken();
@@ -1488,7 +1456,6 @@ const render = async () => {
         return;
     }
 
-    // Administrator console routes
     if (path === routes.consoleBeneficiaries) {
         await renderConsoleBeneficiaries();
         return;

@@ -1,22 +1,25 @@
 const express = require("express");
 const router = express.Router();
+const { protect } = require("../middleware/authMiddleware");
 
 const {
-getOverview,
-getRegionDistribution,
-getBudgetUtilization,
-getProcessingTime,
-getSchemePopularity,
-getDashboard,
-getSchemeAnalytics,
-getSchemesList
+    getOverview,
+    getRegionDistribution,
+    getBudgetUtilization,
+    getProcessingTime,
+    getSchemePopularity,
+    getDashboard,
+    getSchemeAnalytics,
+    getSchemesList
 } = require("../controllers/analyticsController");
-router.get("/overview", getOverview);
-router.get("/region-distribution", getRegionDistribution);
-router.get("/budget-utilization", getBudgetUtilization);
-router.get("/processing-time", getProcessingTime);
-router.get("/scheme-popularity", getSchemePopularity);
-router.get("/dashboard", getDashboard);
-router.get("/scheme-analytics", getSchemeAnalytics);
-router.get("/schemes", getSchemesList);
+
+router.get("/overview", protect, getOverview);
+router.get("/region-distribution", protect, getRegionDistribution);
+router.get("/budget-utilization", protect, getBudgetUtilization);
+router.get("/processing-time", protect, getProcessingTime);
+router.get("/scheme-popularity", protect, getSchemePopularity);
+router.get("/dashboard", protect, getDashboard);
+router.get("/scheme-analytics", protect, getSchemeAnalytics);
+router.get("/schemes", protect, getSchemesList);
+
 module.exports = router;
