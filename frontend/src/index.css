@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #FAF7F0;
+    background-image:
+      linear-gradient(rgba(27, 67, 50, 0.02) 1px, transparent 1px);
+    background-size: 100% 32px;
+  }
+  ::selection {
+    background-color: #C08A2E;
+    color: #FAF7F0;
+  }
+  :focus-visible {
+    outline: 2px solid #1B4332;
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .stamp {
+    @apply inline-flex items-center gap-1.5 rounded-sm border px-2.5 py-1 font-mono text-[11px] uppercase tracking-wider;
+  }
+  .stamp-pending {
+    @apply stamp border-amber text-amber bg-amber-50;
+  }
+  .stamp-complete {
+    @apply stamp border-forest-600 text-forest-600 bg-forest-50;
+  }
+  .stamp-overdue {
+    @apply stamp border-clay text-clay bg-red-50;
+  }
+  .stamp-neutral {
+    @apply stamp border-slate-300 text-slate-500 bg-slate-50;
+  }
+  .card {
+    @apply rounded-md border border-forest-100 bg-white/70 backdrop-blur-sm shadow-sm;
+  }
+  .ledger-row {
+    @apply border-b border-forest-100/70 last:border-b-0;
+  }
+}
