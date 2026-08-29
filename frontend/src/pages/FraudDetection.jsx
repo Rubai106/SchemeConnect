@@ -10,6 +10,7 @@ export default function FraudDetection() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
+  const [reopenedId, setReopenedId] = useState(null);
 
   function load() {
     setLoading(true);
@@ -26,6 +27,7 @@ export default function FraudDetection() {
     setBusyId(id);
     try {
       await api.decideFlaggedApplication(id, decision);
+      setReopenedId(null);
       load();
     } catch (err) {
       setError(err.message);
@@ -100,29 +102,35 @@ export default function FraudDetection() {
               </div>
             )}
 
-            {item.decision ? (
-              <div className="mt-4">
+            {item.decision && item.decision !== "Pending" && reopenedId !== item._id ? (
+              <div className="mt-4 flex items-center gap-3">
                 <StatusBadge value={item.decision} />
+                <button
+                  onClick={() => setReopenedId(item._id)}
+                  className="text-xs text-forest-600 underline decoration-dotted hover:text-forest-700"
+                >
+                  Change decision
+                </button>
               </div>
             ) : (
               <div className="mt-4 flex gap-2">
                 <button
                   disabled={busyId === item._id}
-                  onClick={() => decide(item._id, "Approve")}
+                  onClick={() => decide(item._id, "Approved")}
                   className="rounded-sm bg-forest-600 text-parchment text-sm px-4 py-2 hover:bg-forest-700 disabled:opacity-50 transition-colors"
                 >
                   Approve
                 </button>
                 <button
                   disabled={busyId === item._id}
-                  onClick={() => decide(item._id, "Reject")}
+                  onClick={() => decide(item._id, "Rejected")}
                   className="rounded-sm border border-clay text-clay text-sm px-4 py-2 hover:bg-red-50 disabled:opacity-50 transition-colors"
                 >
                   Reject
                 </button>
                 <button
                   disabled={busyId === item._id}
-                  onClick={() => decide(item._id, "Escalate")}
+                  onClick={() => decide(item._id, "Escalated")}
                   className="rounded-sm border border-amber text-amber text-sm px-4 py-2 hover:bg-amber-50 disabled:opacity-50 transition-colors"
                 >
                   Escalate

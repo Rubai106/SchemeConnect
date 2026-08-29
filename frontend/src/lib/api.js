@@ -1,7 +1,7 @@
 // Central place for talking to the SchemeConnect backend.
 // Change this if your server runs on a different port.
 const BASE_URL = "http://localhost:9141";
-
+ 
 async function request(path, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: { "Content-Type": "application/json" },
@@ -13,7 +13,7 @@ async function request(path, options = {}) {
   }
   return res.json();
 }
-
+ 
 export const api = {
   // Fraud detection
   getFlaggedApplications: () => request("/flagged-applications"),
@@ -25,21 +25,21 @@ export const api = {
     }),
   analyzeFlaggedApplication: (id) =>
     request(`/flagged-applications/${id}/analyze`, { method: "POST" }),
-
+ 
   // Verification cases
   getCases: () => request("/verification-cases"),
   getCase: (id) => request(`/verification-cases/${id}`),
   updateCaseStatus: (id, status) =>
-    request(`/verification-cases/${id}`, {
+    request(`/verification-cases/${id}/status`, {
       method: "PUT",
       body: JSON.stringify({ status })
     }),
-  addCaseNote: (id, event) =>
+  addCaseNote: (id, type, text) =>
     request(`/verification-cases/${id}/notes`, {
       method: "POST",
-      body: JSON.stringify({ event })
+      body: JSON.stringify({ type, text })
     }),
-
+ 
   // Field inspections
   getInspections: (params = {}) => {
     const qs = new URLSearchParams(params).toString();
@@ -61,10 +61,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ description, fileUrl })
     }),
-
+ 
   // Dashboard
   getDashboardSummary: () => request("/dashboard/summary"),
   getOfficerPerformance: () => request("/dashboard/officer-performance"),
   getPendingCases: () => request("/dashboard/pending-cases"),
   getOverdueInspectionsList: () => request("/dashboard/overdue-inspections")
 };
+ 

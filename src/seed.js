@@ -5,7 +5,7 @@ require("dotenv").config();
 const mongoose = require("mongoose");
 const FlaggedApplication = require("./models/FlaggedApplication");
 const VerificationCase = require("./models/VerificationCase");
-const FieldInspection = require("./models/FieldInspection.js");
+const FieldInspection = require("./models/FieldInspection");
  
 async function seed() {
     await mongoose.connect(process.env.MONGODB_URI);
@@ -46,21 +46,30 @@ async function seed() {
             applicantName: "Fariha Alam",
             scheme: "Housing",
             status: "Under review",
-            timeline: [{ event: "Site visit scheduled" }, { event: "Clarification requested on income proof" }]
+            timeline: [
+                { type: "Status Change", text: "Status changed to Under review" },
+                { type: "Finding", text: "Site visit scheduled" },
+                { type: "Clarification Request", text: "Requested clarification on income proof" }
+            ]
         },
         {
             caseId: "VC-1043",
             applicantName: "Kaushik Das",
             scheme: "Healthcare",
             status: "Assigned",
-            timeline: [{ event: "Case assigned to officer" }]
+            timeline: [
+                { type: "Status Change", text: "Status changed to Assigned" }
+            ]
         },
         {
             caseId: "VC-1044",
             applicantName: "Nasrin Akhter",
             scheme: "Healthcare",
             status: "Verified",
-            timeline: [{ event: "Field visit completed" }, { event: "Case verified" }]
+            timeline: [
+                { type: "Finding", text: "Field visit completed" },
+                { type: "Status Change", text: "Status changed to Verified" }
+            ]
         }
     ]);
  
