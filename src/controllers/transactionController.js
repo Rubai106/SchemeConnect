@@ -1,3 +1,4 @@
+const Stripe = require("stripe");
 const Scheme = require("../models/Scheme");
 const Transaction = require("../models/Transaction");
 const asyncHandler = require("../utils/asyncHandler");
@@ -6,6 +7,7 @@ const { sendSuccess } = require("../utils/apiResponse");
 const SCHEME_STATUS = require("../constants/schemeStatus");
 const TRANSACTION_STATUS = require("../constants/transactionStatus");
 
+const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 const requiredDisburseFields = ["schemeId", "beneficiaryName", "beneficiaryPhone", "amount"];
 
 const getMissingFields = (body, fields) => {
@@ -14,17 +16,28 @@ const getMissingFields = (body, fields) => {
     });
 };
 
-// -----------------------------------------------------------------------
-// Stands in for a real call to the bKash Payment Gateway Checkout API.
-// Swap this out for an actual fetch()/axios call once sandbox
-// credentials are available — everything else in this file stays the same.
-// -----------------------------------------------------------------------
-const mockBkashGatewayCall = () => {
-    const isSuccess = Math.random() > 0.1;
+const stripeGatewayCall = async ({ amount, beneficiaryName, schemeName }) => {
+    if (!stripe) {
+        throw createError("Stripe is not configured. Please add STRIPE_SECRET_KEY in your .env file.", 500);
+    }
+
+    const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(amount * 100),
+        currency: "bdt",
+        automatic_payment_methods: {
+            enabled: true
+        },
+        metadata: {
+            beneficiaryName,
+            schemeName
+        }
+    });
 
     return {
-        success: isSuccess,
-        reference: isSuccess ? `BK${Date.now()}${Math.floor(Math.random() * 1000)}` : null
+        success: true,
+        reference: paymentIntent.id,
+        clientSecret: paymentIntent.client_secret,
+        gateway: "Stripe"
     };
 };
 
@@ -73,7 +86,20 @@ const disburseFund = asyncHandler(async (req, res) => {
     const utilizedBudget = await getUtilizedBudget(scheme._id);
 
     if (utilizedBudget + disbursementAmount > scheme.allocatedBudget) {
-        throw createError("Disbursement exceeds remaining scheme budget", 400);
+        const failedTransaction = await Transaction.create({
+            scheme: scheme._id,
+            beneficiaryName: req.body.beneficiaryName.trim(),
+            beneficiaryPhone: req.body.beneficiaryPhone.trim(),
+            amount: disbursementAmount,
+            initiatedBy: req.user.userId,
+            status: TRANSACTION_STATUS.FAILED,
+            paymentGateway: "Stripe",
+            gatewayReference: "budget_exceeded"
+        });
+
+        return sendSuccess(res, 400, "Disbursement exceeds remaining scheme budget", {
+            transaction: failedTransaction
+        });
     }
 
     let transaction = await Transaction.create({
@@ -82,20 +108,81 @@ const disburseFund = asyncHandler(async (req, res) => {
         beneficiaryPhone: req.body.beneficiaryPhone.trim(),
         amount: disbursementAmount,
         initiatedBy: req.user.userId,
-        status: TRANSACTION_STATUS.PENDING
+        status: TRANSACTION_STATUS.PENDING,
+        paymentGateway: "Stripe"
     });
 
-    const gatewayResult = mockBkashGatewayCall();
+    const gatewayResult = await stripeGatewayCall({
+        amount: disbursementAmount,
+        beneficiaryName: req.body.beneficiaryName.trim(),
+        schemeName: scheme.name
+    });
 
-    transaction.status = gatewayResult.success ? TRANSACTION_STATUS.SUCCESSFUL : TRANSACTION_STATUS.FAILED;
+    transaction.paymentGateway = gatewayResult.gateway;
     transaction.gatewayReference = gatewayResult.reference;
+
+    if (gatewayResult.clientSecret) {
+        transaction.status = TRANSACTION_STATUS.PENDING;
+    } else {
+        transaction.status = gatewayResult.success ? TRANSACTION_STATUS.SUCCESSFUL : TRANSACTION_STATUS.FAILED;
+    }
+
     await transaction.save();
 
-    const message = gatewayResult.success
-        ? "Disbursement successful"
-        : "Disbursement failed at the payment gateway";
+    const message = gatewayResult.clientSecret
+        ? "Payment intent created successfully"
+        : gatewayResult.success
+            ? "Disbursement successful"
+            : "Disbursement failed at the payment gateway";
 
-    return sendSuccess(res, 201, message, { transaction });
+    return sendSuccess(res, 201, message, {
+        transaction,
+        clientSecret: gatewayResult.clientSecret,
+        paymentIntentId: gatewayResult.reference
+    });
+});
+
+const confirmDisbursement = asyncHandler(async (req, res) => {
+    const { transactionId } = req.params;
+    const { paymentIntentId, status = "succeeded" } = req.body;
+
+    if (!transactionId) {
+        throw createError("Transaction ID is required", 400);
+    }
+
+    const transaction = await Transaction.findById(transactionId);
+
+    if (!transaction) {
+        throw createError("Transaction not found", 404);
+    }
+
+    if (paymentIntentId) {
+        transaction.gatewayReference = paymentIntentId;
+    }
+
+    transaction.status = status === "succeeded" ? TRANSACTION_STATUS.SUCCESSFUL : TRANSACTION_STATUS.FAILED;
+    transaction.paymentGateway = "Stripe";
+    await transaction.save();
+
+    return sendSuccess(res, 200, "Payment confirmed successfully", { transaction });
+});
+
+const getTransactionById = asyncHandler(async (req, res) => {
+    const { transactionId } = req.params;
+
+    if (!transactionId) {
+        throw createError("Transaction ID is required", 400);
+    }
+
+    const transaction = await Transaction.findById(transactionId)
+        .populate("scheme", "name category")
+        .populate("initiatedBy", "fullName role");
+
+    if (!transaction) {
+        throw createError("Transaction not found", 404);
+    }
+
+    return sendSuccess(res, 200, "Transaction fetched successfully", { transaction });
 });
 
 // FR 3.8 / 3.9 — The financial ledger, filterable for auditing
@@ -108,6 +195,8 @@ const getLedger = asyncHandler(async (req, res) => {
 
     if (req.query.status) {
         filter.status = req.query.status;
+    } else {
+        filter.status = { $ne: TRANSACTION_STATUS.PENDING };
     }
 
     const ledger = await Transaction.find(filter)
@@ -120,5 +209,7 @@ const getLedger = asyncHandler(async (req, res) => {
 
 module.exports = {
     disburseFund,
+    confirmDisbursement,
+    getTransactionById,
     getLedger
 };

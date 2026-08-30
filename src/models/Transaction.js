@@ -29,7 +29,7 @@ const transactionSchema = new mongoose.Schema(
 
     paymentGateway: {
         type: String,
-        default: "bKash"
+        default: "Stripe"
     },
 
     gatewayReference: {

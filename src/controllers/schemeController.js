@@ -11,8 +11,7 @@ const requiredCreateFields = [
     "category",
     "eligibilityCriteria",
     "benefitAmount",
-    "allocatedBudget",
-    "applicationDeadline"
+    "allocatedBudget"
 ];
 
 const getMissingFields = (body, fields) => {
@@ -47,7 +46,6 @@ const createScheme = asyncHandler(async (req, res) => {
         eligibilityCriteria: schemeData.eligibilityCriteria.trim(),
         benefitAmount: Number(schemeData.benefitAmount),
         allocatedBudget: Number(schemeData.allocatedBudget),
-        applicationDeadline: schemeData.applicationDeadline,
         lowBudgetThresholdPercent: schemeData.lowBudgetThresholdPercent || 15,
         createdBy: req.user.userId
     });
@@ -81,7 +79,6 @@ const updateScheme = asyncHandler(async (req, res) => {
         "eligibilityCriteria",
         "benefitAmount",
         "allocatedBudget",
-        "applicationDeadline",
         "status",
         "lowBudgetThresholdPercent"
     ];

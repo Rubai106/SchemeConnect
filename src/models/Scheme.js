@@ -40,11 +40,6 @@ const schemeSchema = new mongoose.Schema(
         min: 0
     },
 
-    applicationDeadline: {
-        type: Date,
-        required: true
-    },
-
     status: {
         type: String,
         enum: Object.values(SCHEME_STATUS),

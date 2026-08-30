@@ -1,6 +1,20 @@
 const app = document.getElementById("app");
 const TOKEN_KEY = "schemeconnectToken";
 
+const loadStripeConfig = async () => {
+    if (window.__SCHEMECONNECT_STRIPE_PUBLISHABLE_KEY) {
+        return window.__SCHEMECONNECT_STRIPE_PUBLISHABLE_KEY;
+    }
+
+    try {
+        const result = await apiRequest("/api/config");
+        window.__SCHEMECONNECT_STRIPE_PUBLISHABLE_KEY = result.data.stripePublishableKey;
+        return result.data.stripePublishableKey;
+    } catch (error) {
+        return null;
+    }
+};
+
 const getToken = () => localStorage.getItem(TOKEN_KEY);
 const setToken = (token) => localStorage.setItem(TOKEN_KEY, token);
 const clearToken = () => localStorage.removeItem(TOKEN_KEY);
@@ -42,7 +56,10 @@ const apiRequest = async (url, options = {}) => {
     }
 
     if (!response.ok) {
-        throw new Error(result.message || "Something went wrong.");
+        const error = new Error(result.message || "Something went wrong.");
+        error.status = response.status;
+        error.result = result;
+        throw error;
     }
 
     return result;
@@ -451,7 +468,7 @@ const renderStaffManagement = async () => {
 
             staffList.innerHTML = `
                 <div class="table-scroll">
-                    <table class="ledger-table">
+                    <table class="ledger-table staff-table">
                         <thead>
                             <tr>
                                 <th>Name</th>
@@ -551,7 +568,6 @@ const renderFinanceDashboard = async () => {
                 <select id="financeStatusFilter">
                     <option value="">All statuses</option>
                     <option value="Successful">Successful</option>
-                    <option value="Pending">Pending</option>
                     <option value="Failed">Failed</option>
                 </select>
             </div>
@@ -586,6 +602,7 @@ const renderFinanceDashboard = async () => {
             const query = statusFilter ? `?status=${statusFilter}` : "";
             const result = await apiRequest(`/api/transactions${query}`);
             tableBody.innerHTML = renderLedgerRows(result.data.ledger);
+            attachLedgerRowClicks();
         } catch (error) {
             tableBody.innerHTML = `<tr><td colspan="6" class="empty-note">Unable to load ledger.</td></tr>`;
         }
@@ -671,7 +688,7 @@ const renderLedgerRows = (ledger) => {
     return ledger
         .map(
             (transaction) => `
-            <tr>
+            <tr class="ledger-row" data-transaction-id="${transaction._id}" title="View receipt">
                 <td>${new Date(transaction.createdAt).toLocaleDateString()}</td>
                 <td>${transaction.scheme ? transaction.scheme.name : "—"}</td>
                 <td>${transaction.beneficiaryName}</td>
@@ -682,6 +699,88 @@ const renderLedgerRows = (ledger) => {
         `
         )
         .join("");
+};
+
+const ensureReceiptModal = () => {
+    let modal = document.getElementById("receiptModal");
+
+    if (modal) {
+        return modal;
+    }
+
+    modal = document.createElement("div");
+    modal.id = "receiptModal";
+    modal.className = "receipt-modal hidden";
+    modal.innerHTML = `
+        <div class="receipt-modal-backdrop" data-close-receipt="true"></div>
+        <div class="receipt-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="receiptTitle">
+            <div class="receipt-modal-header">
+                <h3 id="receiptTitle">Disbursement Receipt</h3>
+                <button type="button" class="button secondary" data-close-receipt="true">Close</button>
+            </div>
+            <div id="receiptContent" class="receipt-content"></div>
+            <div class="receipt-modal-actions">
+                <button type="button" class="button primary" id="printReceiptButton">Print</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.addEventListener("click", (event) => {
+        if (event.target.dataset.closeReceipt === "true") {
+            modal.classList.add("hidden");
+        }
+    });
+
+    document.getElementById("printReceiptButton").addEventListener("click", () => {
+        window.print();
+    });
+
+    return modal;
+};
+
+const openReceiptModal = async (transactionId) => {
+    const modal = ensureReceiptModal();
+    const receiptContent = document.getElementById("receiptContent");
+
+    receiptContent.innerHTML = "<p class=\"empty-note\">Loading receipt…</p>";
+    modal.classList.remove("hidden");
+
+    try {
+        const result = await apiRequest(`/api/transactions/${transactionId}`);
+        const transaction = result.data.transaction;
+        const amount = Number(transaction.amount || 0);
+        const schemeName = transaction.scheme ? transaction.scheme.name : "—";
+        const createdAt = transaction.createdAt ? new Date(transaction.createdAt).toLocaleString() : "—";
+
+        receiptContent.innerHTML = `
+            <div class="receipt-card">
+                <div class="receipt-brand">
+                    <h4>SchemeConnect</h4>
+                    <span>Disbursement Receipt</span>
+                </div>
+                <div class="receipt-grid">
+                    <div><strong>Beneficiary</strong><span>${transaction.beneficiaryName || "—"}</span></div>
+                    <div><strong>Phone</strong><span>${transaction.beneficiaryPhone || "—"}</span></div>
+                    <div><strong>Scheme</strong><span>${schemeName}</span></div>
+                    <div><strong>Amount</strong><span>${formatMoney(amount)}</span></div>
+                    <div><strong>Reference</strong><span class="mono">${transaction.gatewayReference || "—"}</span></div>
+                    <div><strong>Status</strong><span class="badge badge-${transaction.status.toLowerCase()}">${transaction.status}</span></div>
+                    <div><strong>Date</strong><span>${createdAt}</span></div>
+                    <div><strong>Payment Gateway</strong><span>${transaction.paymentGateway || "—"}</span></div>
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        receiptContent.innerHTML = `<p class="empty-note">Unable to load receipt.</p>`;
+    }
+};
+
+const attachLedgerRowClicks = () => {
+    document.querySelectorAll(".ledger-row").forEach((row) => {
+        row.onclick = () => openReceiptModal(row.dataset.transactionId);
+    });
 };
 
 const loadLedger = async (statusFilter = "") => {
@@ -695,6 +794,7 @@ const loadLedger = async (statusFilter = "") => {
         const query = statusFilter ? `?status=${statusFilter}` : "";
         const result = await apiRequest(`/api/transactions${query}`);
         tableBody.innerHTML = renderLedgerRows(result.data.ledger);
+        attachLedgerRowClicks();
     } catch (error) {
         tableBody.innerHTML = `<tr><td colspan="6" class="empty-note">Unable to load ledger.</td></tr>`;
     }
@@ -702,7 +802,7 @@ const loadLedger = async (statusFilter = "") => {
 
 let selectedScheme = null;
 
-const renderDisbursementPanel = () => {
+const renderDisbursementPanel = async () => {
     const panel = document.getElementById("disbursementPanel");
 
     if (!panel) {
@@ -728,18 +828,79 @@ const renderDisbursementPanel = () => {
                 <input id="beneficiaryName" name="beneficiaryName" required>
             </div>
             <div class="form-row">
-                <label for="beneficiaryPhone">bKash Number</label>
+                <label for="beneficiaryPhone">Beneficiary Phone</label>
                 <input id="beneficiaryPhone" name="beneficiaryPhone" placeholder="01XXXXXXXXX" required>
             </div>
             <div class="form-row">
                 <label for="amount">Amount (BDT)</label>
                 <input id="amount" name="amount" type="number" min="0" required>
             </div>
+            <div class="form-row">
+                <label>Card Information</label>
+                <div class="stripe-card-stack">
+                    <div id="card-number-element" class="stripe-card-field"></div>
+                    <div class="stripe-card-row">
+                        <div id="card-expiry-element" class="stripe-card-field stripe-card-small"></div>
+                        <div id="card-cvc-element" class="stripe-card-field stripe-card-small"></div>
+                    </div>
+                </div>
+            </div>
             <div class="actions">
-                <button class="button primary" type="submit">Send Payment</button>
+                <button class="button primary" type="submit">Pay with Stripe</button>
             </div>
         </form>
     `;
+
+    const stripePublishableKey = await loadStripeConfig();
+
+    if (!window.Stripe || !stripePublishableKey) {
+        const messageBox = document.getElementById("disbursementMessage");
+        messageBox.className = "message error";
+        messageBox.textContent = "Stripe.js failed to load or the Stripe publishable key is missing.";
+        messageBox.hidden = false;
+        return;
+    }
+
+    const stripe = Stripe(stripePublishableKey);
+    const elements = stripe.elements({
+        appearance: {
+            disablePlaceholders: true
+        }
+    });
+    const cardNumber = elements.create("cardNumber", {
+        style: {
+            base: {
+                color: "#1f2937",
+                fontFamily: "Arial, sans-serif",
+                fontSize: "16px",
+                iconColor: "#0f766e"
+            }
+        }
+    });
+    const cardExpiry = elements.create("cardExpiry", {
+        style: {
+            base: {
+                color: "#1f2937",
+                fontFamily: "Arial, sans-serif",
+                fontSize: "16px",
+                iconColor: "#0f766e"
+            }
+        }
+    });
+    const cardCvc = elements.create("cardCvc", {
+        style: {
+            base: {
+                color: "#1f2937",
+                fontFamily: "Arial, sans-serif",
+                fontSize: "16px",
+                iconColor: "#0f766e"
+            }
+        }
+    });
+
+    cardNumber.mount("#card-number-element");
+    cardExpiry.mount("#card-expiry-element");
+    cardCvc.mount("#card-cvc-element");
 
     document.getElementById("disbursementForm").addEventListener("submit", async (event) => {
         event.preventDefault();
@@ -749,7 +910,7 @@ const renderDisbursementPanel = () => {
         const messageBox = document.getElementById("disbursementMessage");
 
         button.disabled = true;
-        button.textContent = "Processing via bKash...";
+        button.textContent = "Processing payment...";
         messageBox.hidden = true;
 
         try {
@@ -763,22 +924,83 @@ const renderDisbursementPanel = () => {
                 })
             });
 
-            const isSuccessful = result.data.transaction.status === "Successful";
+            const { clientSecret, transaction } = result.data;
 
-            messageBox.className = `message ${isSuccessful ? "success" : "error"}`;
-            messageBox.textContent = `${result.message}${result.data.transaction.gatewayReference ? " — Ref: " + result.data.transaction.gatewayReference : ""}`;
-            messageBox.hidden = false;
+            if (!clientSecret) {
+                const isSuccessful = transaction.status === "Successful";
+                messageBox.className = `message ${isSuccessful ? "success" : "error"}`;
+                messageBox.textContent = `${result.message}${transaction.gatewayReference ? " — Ref: " + transaction.gatewayReference : ""}`;
+                messageBox.hidden = false;
+                form.reset();
+                loadLedger();
+                loadBudgetSummary(selectedScheme._id, document.getElementById(`budget-${selectedScheme._id}`));
+                return;
+            }
 
-            form.reset();
-            loadLedger();
-            loadBudgetSummary(selectedScheme._id, document.getElementById(`budget-${selectedScheme._id}`));
+            const paymentResult = await stripe.confirmCardPayment(clientSecret, {
+                payment_method: {
+                    card: cardNumber,
+                    billing_details: {
+                        name: form.beneficiaryName.value.trim(),
+                        phone: form.beneficiaryPhone.value.trim()
+                    }
+                }
+            });
+
+            if (paymentResult.error) {
+                try {
+                    await apiRequest(`/api/transactions/${transaction._id}/confirm`, {
+                        method: "POST",
+                        body: JSON.stringify({
+                            status: "failed"
+                        })
+                    });
+                } catch (confirmError) {
+                    // ignore confirm error and keep the original card error visible
+                }
+
+                loadLedger();
+                loadBudgetSummary(selectedScheme._id, document.getElementById(`budget-${selectedScheme._id}`));
+                throw new Error(paymentResult.error.message || "Card payment failed.");
+            }
+
+            if (paymentResult.paymentIntent && paymentResult.paymentIntent.status === "succeeded") {
+                const confirmation = await apiRequest(`/api/transactions/${transaction._id}/confirm`, {
+                    method: "POST",
+                    body: JSON.stringify({
+                        paymentIntentId: paymentResult.paymentIntent.id,
+                        status: paymentResult.paymentIntent.status
+                    })
+                });
+
+                messageBox.className = "message success";
+                messageBox.textContent = `${confirmation.message} — Ref: ${confirmation.data.transaction.gatewayReference}`;
+                messageBox.hidden = false;
+
+                form.reset();
+                loadLedger();
+                loadBudgetSummary(selectedScheme._id, document.getElementById(`budget-${selectedScheme._id}`));
+            }
         } catch (error) {
-            messageBox.className = "message error";
-            messageBox.textContent = error.message;
-            messageBox.hidden = false;
+            const failedTransaction = error.result && error.result.data && error.result.data.transaction
+                ? error.result.data.transaction
+                : null;
+
+            if (failedTransaction) {
+                messageBox.className = "message error";
+                messageBox.textContent = `${error.result.message} — Failed transaction recorded.`;
+                messageBox.hidden = false;
+                form.reset();
+                loadLedger();
+                loadBudgetSummary(selectedScheme._id, document.getElementById(`budget-${selectedScheme._id}`));
+            } else {
+                messageBox.className = "message error";
+                messageBox.textContent = error.message;
+                messageBox.hidden = false;
+            }
         } finally {
             button.disabled = false;
-            button.textContent = "Send Payment";
+            button.textContent = "Pay with Stripe";
         }
     });
 };
@@ -827,7 +1049,6 @@ const startSchemeEdit = async (schemeId) => {
         form.schemeId.value = scheme._id;
         form.name.value = scheme.name;
         form.category.value = scheme.category;
-        form.applicationDeadline.value = new Date(scheme.applicationDeadline).toISOString().split("T")[0];
         form.benefitAmount.value = scheme.benefitAmount;
         form.allocatedBudget.value = scheme.allocatedBudget;
         form.eligibilityCriteria.value = scheme.eligibilityCriteria;
@@ -892,10 +1113,6 @@ const renderSchemeStudio = async () => {
                         </select>
                     </div>
                     <div class="form-row">
-                        <label for="applicationDeadline">Application Deadline</label>
-                        <input id="applicationDeadline" name="applicationDeadline" type="date" required>
-                    </div>
-                    <div class="form-row">
                         <label for="benefitAmount">Benefit Amount (BDT)</label>
                         <input id="benefitAmount" name="benefitAmount" type="number" min="0" required>
                     </div>
@@ -937,7 +1154,6 @@ const renderSchemeStudio = async () => {
                 <select id="ledgerStatusFilter">
                     <option value="">All statuses</option>
                     <option value="Successful">Successful</option>
-                    <option value="Pending">Pending</option>
                     <option value="Failed">Failed</option>
                 </select>
             </div>
@@ -989,8 +1205,7 @@ const renderSchemeStudio = async () => {
                 category: form.category.value,
                 eligibilityCriteria: form.eligibilityCriteria.value.trim(),
                 benefitAmount: Number(form.benefitAmount.value),
-                allocatedBudget: Number(form.allocatedBudget.value),
-                applicationDeadline: form.applicationDeadline.value
+                allocatedBudget: Number(form.allocatedBudget.value)
             };
 
             if (isEditing) {

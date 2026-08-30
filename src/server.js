@@ -1,10 +1,10 @@
 
-const dns = require("dns");
+require("dotenv").config();
 
+const dns = require("dns");
 dns.setServers(["8.8.8.8", "8.8.4.4"]);
 
 const express = require("express");
-const dotenv = require("dotenv");
 const path = require("path");
 const { connectDB } = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
@@ -12,8 +12,6 @@ const schemeRoutes = require("./routes/schemeRoutes");
 const transactionRoutes = require("./routes/transactionRoutes");
 const requestLogger = require("./middleware/requestLogger");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
-
-dotenv.config();
 
 const app = express();
 
@@ -26,6 +24,15 @@ app.use(express.static(path.join(__dirname, "../public")));
 app.use("/api/auth", authRoutes);
 app.use("/api/schemes", schemeRoutes);
 app.use("/api/transactions", transactionRoutes);
+
+app.get("/api/config", (req, res) => {
+    res.json({
+        success: true,
+        data: {
+            stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || null
+        }
+    });
+});
 
 app.get("/", (req, res) => {
     res.send("SchemeConnect API is running...");
