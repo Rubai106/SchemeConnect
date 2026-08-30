@@ -608,3 +608,418 @@ select:focus {
         text-align: center;
     }
 }
+
+ 
+
+
+
+/* =========================
+   SCHEME CONFIGURATION STUDIO by mahima
+   ========================= */
+
+.studio-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+
+    gap: 18px;
+
+    align-items: start;
+}
+
+.staff-layout {
+    grid-template-columns: minmax(280px, 1fr) minmax(0, 2fr);
+}
+
+.scheme-card {
+    padding: 20px;
+
+    margin-bottom: 14px;
+}
+
+.scheme-card-top {
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: flex-start;
+
+    gap: 10px;
+}
+
+.scheme-card h3 {
+    margin: 0 0 2px;
+
+    font-size: 15px;
+}
+
+.scheme-category {
+    margin: 0;
+
+    color: var(--muted);
+
+    font-size: 12px;
+
+    text-transform: capitalize;
+}
+
+.scheme-budget-line {
+    margin: 10px 0 6px;
+
+    font-size: 13px;
+
+    color: var(--text);
+}
+
+.select-scheme-button {
+    margin-top: 12px;
+
+    width: 100%;
+}
+
+.empty-note {
+    color: var(--muted);
+
+    font-size: 13px;
+
+    text-align: center;
+
+    padding: 12px 0;
+}
+
+/* Budget bar */
+
+.budget-box {
+    margin-top: 4px;
+}
+
+.budget-meta {
+    display: flex;
+
+    justify-content: space-between;
+
+    font-size: 11px;
+
+    color: var(--muted);
+
+    margin-bottom: 4px;
+}
+
+.budget-track {
+    width: 100%;
+    height: 8px;
+
+    background: #e5edec;
+
+    border-radius: 999px;
+
+    overflow: hidden;
+}
+
+.budget-fill {
+    height: 100%;
+
+    background: var(--success);
+}
+
+.budget-fill.danger {
+    background: var(--danger);
+}
+
+.budget-alert {
+    margin: 6px 0 0;
+
+    font-size: 11px;
+
+    color: var(--danger);
+
+    font-weight: 700;
+}
+
+/* Badges */
+
+.badge {
+    display: inline-block;
+
+    padding: 3px 10px;
+
+    border-radius: 999px;
+
+    font-size: 11px;
+
+    font-weight: 700;
+
+    white-space: nowrap;
+}
+
+.badge-active,
+.badge-successful {
+    background: #e6f7ee;
+    color: var(--success);
+}
+
+.badge-draft,
+.badge-pending {
+    background: #fef6e6;
+    color: #92600a;
+}
+
+.badge-paused {
+    background: #eef2f7;
+    color: var(--muted);
+}
+
+.badge-closed,
+.badge-failed {
+    background: #fdecec;
+    color: var(--danger);
+}
+
+/* Ledger table */
+
+.ledger-header {
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    margin-bottom: 14px;
+}
+
+.ledger-header h2 {
+    margin: 0;
+
+    font-size: 18px;
+}
+
+.ledger-header select {
+    width: auto;
+
+    min-height: 34px;
+}
+
+.ledger-table {
+    width: 100%;
+
+    border-collapse: collapse;
+
+    font-size: 13px;
+}
+
+.staff-table {
+    table-layout: fixed;
+}
+
+.staff-table th,
+.staff-table td {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    vertical-align: top;
+}
+
+.ledger-table th {
+    text-align: left;
+
+    color: var(--muted);
+
+    font-size: 11px;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.03em;
+
+    padding: 8px 10px;
+
+    border-bottom: 1px solid var(--line);
+}
+
+.ledger-table td {
+    padding: 10px;
+
+    border-bottom: 1px solid var(--line);
+}
+
+.ledger-table .mono {
+    font-family: monospace;
+
+    font-size: 12px;
+}
+
+.ledger-row {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.ledger-row:hover {
+    background-color: rgba(15, 118, 110, 0.04);
+}
+
+.receipt-modal {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.receipt-modal.hidden {
+    display: none;
+}
+
+.receipt-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+}
+
+.receipt-modal-dialog {
+    position: relative;
+    z-index: 1;
+    width: min(620px, 92vw);
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 18px 55px rgba(15, 23, 42, 0.22);
+    padding: 22px;
+}
+
+.receipt-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.receipt-content {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 18px;
+    background: #f8fafc;
+}
+
+.receipt-card {
+    display: grid;
+    gap: 18px;
+}
+
+.receipt-brand {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 12px;
+}
+
+.receipt-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 18px;
+}
+
+.receipt-grid div {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.receipt-grid strong {
+    font-size: 0.82rem;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.receipt-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 18px;
+}
+
+.stripe-card-stack {
+    display: grid;
+    gap: 10px;
+}
+
+.stripe-card-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.stripe-card-field {
+    min-height: 40px;
+    border: 1px solid #ccd9d7;
+    border-radius: 6px;
+    padding: 8px 11px;
+    background: var(--white);
+}
+
+.stripe-card-small {
+    min-width: 0;
+}
+
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 10mm;
+    }
+
+    html,
+    body {
+        overflow: visible !important;
+        height: auto !important;
+        background: #fff !important;
+    }
+
+    body > *:not(.receipt-modal) {
+        display: none !important;
+    }
+
+    .receipt-modal {
+        position: static !important;
+        inset: auto !important;
+        display: block !important;
+        background: transparent !important;
+        z-index: 0 !important;
+    }
+
+    .receipt-modal-backdrop {
+        display: none !important;
+    }
+
+    .receipt-modal-dialog {
+        position: static !important;
+        box-shadow: none !important;
+        width: 100% !important;
+        max-width: none !important;
+        border: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        background: transparent !important;
+    }
+
+    .receipt-modal-header,
+    .receipt-modal-actions {
+        display: none !important;
+    }
+
+    .receipt-content {
+        border: none !important;
+        background: #fff !important;
+        padding: 0 !important;
+    }
+
+    .receipt-card {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+}
+
+@media (max-width: 900px) {
+    .studio-grid {
+        grid-template-columns: 1fr;
+    }
+}
