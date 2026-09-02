@@ -7,13 +7,28 @@ const express = require("express");
 const path = require("path");
 const cors = require("cors");
 const connectDB = require("./config/db");
+
 const authRoutes = require("./routes/authRoutes");
+
+// Fariha's existing routes
+const citizenRoutes = require("./routes/citizenRoutes");
+const documentRoutes = require("./routes/DocumentRoutes");
+const eligibilityRoutes = require("./routes/eligibilityRoutes");
+const analyticsRoutes = require("./routes/analyticsRoutes");
+const beneficiaryRoutes = require("./routes/beneficiaryRoutes");
+const auditLogRoutes = require("./routes/auditLogRoutes");
+const circularRoutes = require("./routes/circularRoutes");
+
+// Mahima's features
 const schemeRoutes = require("./routes/schemeRoutes");
 const transactionRoutes = require("./routes/transactionRoutes");
-const fraudRoutes = require("./routes/fraudRoutes");
+
+// Nafisaa's features
+const fraudRoutes = require("./routes/Fraudroutes");
 const caseRoutes = require("./routes/caseRoutes");
 const inspectionRoutes = require("./routes/inspectionRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
+
 const requestLogger = require("./middleware/requestLogger");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 
@@ -26,7 +41,17 @@ app.use(express.json());
 app.use(requestLogger);
 app.use(express.static(path.join(__dirname, "../public")));
 
+// Authentication
 app.use("/api/auth", authRoutes);
+
+// Fariha's existing API routes
+app.use("/api/citizens", citizenRoutes);
+app.use("/api/documents", documentRoutes);
+app.use("/api/eligibility", eligibilityRoutes);
+app.use("/api/analytics", analyticsRoutes);
+app.use("/api/beneficiaries", beneficiaryRoutes);
+app.use("/api/audit-logs", auditLogRoutes);
+app.use("/api/circulars", circularRoutes);
 
 // Nafisaa's features
 app.use("/", fraudRoutes);
@@ -51,8 +76,22 @@ app.get("/", (req, res) => {
     res.send("SchemeConnect API is running...");
 });
 
+// Frontend routes from both branches
 app.get(
-    ["/login", "/register", "/dashboard", "/scheme-studio", "/staff", "/finance"],
+    [
+        "/login",
+        "/register",
+        "/dashboard",
+        "/eligibility",
+        "/console",
+        "/console/beneficiaries",
+        "/console/analytics",
+        "/console/audit-log",
+        "/console/circulars",
+        "/scheme-studio",
+        "/staff",
+        "/finance"
+    ],
     (req, res) => {
         res.sendFile(path.join(__dirname, "../public/index.html"));
     }

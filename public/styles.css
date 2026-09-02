@@ -526,6 +526,68 @@ select:focus {
 
     margin-bottom: 22px;
 }
+/* =========================
+   ADMINISTRATOR CONSOLE
+   (new — added for Member 4's four features)
+   ========================= */
+
+.table-wrap {
+    overflow-x: auto;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.table th,
+.table td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+}
+
+.table th {
+    color: var(--muted);
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.table tbody tr:hover {
+    background: #f7faf9;
+}
+
+.badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.badge-pending {
+    background: #f3f4f6;
+    color: var(--muted);
+}
+
+.badge-under_review {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.badge-verified {
+    background: #ecfdf5;
+    color: var(--success);
+}
+
+.badge-flagged {
+    background: #fef2f2;
+    color: var(--danger);
+}
 
 /* =========================
    MOBILE
@@ -538,26 +600,20 @@ select:focus {
 
     .topbar-inner {
         padding: 12px 16px;
-
         flex-wrap: wrap;
-
         gap: 10px 18px;
     }
 
     .nav {
         order: 3;
-
         width: 100%;
-
         gap: 18px;
-
         overflow-x: auto;
     }
 
     .nav a,
     .nav span {
         padding: 8px 0;
-
         white-space: nowrap;
     }
 
@@ -595,7 +651,6 @@ select:focus {
     .actions,
     .auth-actions {
         flex-direction: column-reverse;
-
         align-items: stretch;
     }
 
@@ -609,22 +664,71 @@ select:focus {
     }
 }
 
- 
+/* =========================
+   MODAL
+   (new — for the Register Beneficiary popup)
+   ========================= */
 
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 50;
+}
 
+.modal-backdrop[hidden] {
+    display: none;
+}
+
+.modal {
+    background: var(--white);
+    border-radius: 10px;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+    padding: 28px;
+    width: 100%;
+    max-width: 640px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.modal-close {
+    border: 0;
+    background: transparent;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--muted);
+    padding: 0;
+}
+
+.modal-close:hover {
+    color: var(--text);
+}
 
 /* =========================
-   SCHEME CONFIGURATION STUDIO by mahima
+   SCHEME CONFIGURATION STUDIO by Mahima
    ========================= */
 
 .studio-grid {
     display: grid;
-
-    grid-template-columns:
-        repeat(3, minmax(0, 1fr));
-
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 18px;
-
     align-items: start;
 }
 
@@ -634,57 +738,43 @@ select:focus {
 
 .scheme-card {
     padding: 20px;
-
     margin-bottom: 14px;
 }
 
 .scheme-card-top {
     display: flex;
-
     justify-content: space-between;
-
     align-items: flex-start;
-
     gap: 10px;
 }
 
 .scheme-card h3 {
     margin: 0 0 2px;
-
     font-size: 15px;
 }
 
 .scheme-category {
     margin: 0;
-
     color: var(--muted);
-
     font-size: 12px;
-
     text-transform: capitalize;
 }
 
 .scheme-budget-line {
     margin: 10px 0 6px;
-
     font-size: 13px;
-
     color: var(--text);
 }
 
 .select-scheme-button {
     margin-top: 12px;
-
     width: 100%;
 }
 
 .empty-note {
     color: var(--muted);
-
     font-size: 13px;
-
     text-align: center;
-
     padding: 12px 0;
 }
 
@@ -696,30 +786,22 @@ select:focus {
 
 .budget-meta {
     display: flex;
-
     justify-content: space-between;
-
     font-size: 11px;
-
     color: var(--muted);
-
     margin-bottom: 4px;
 }
 
 .budget-track {
     width: 100%;
     height: 8px;
-
     background: #e5edec;
-
     border-radius: 999px;
-
     overflow: hidden;
 }
 
 .budget-fill {
     height: 100%;
-
     background: var(--success);
 }
 
@@ -729,29 +811,12 @@ select:focus {
 
 .budget-alert {
     margin: 6px 0 0;
-
     font-size: 11px;
-
     color: var(--danger);
-
     font-weight: 700;
 }
 
 /* Badges */
-
-.badge {
-    display: inline-block;
-
-    padding: 3px 10px;
-
-    border-radius: 999px;
-
-    font-size: 11px;
-
-    font-weight: 700;
-
-    white-space: nowrap;
-}
 
 .badge-active,
 .badge-successful {
@@ -780,31 +845,24 @@ select:focus {
 
 .ledger-header {
     display: flex;
-
     justify-content: space-between;
-
     align-items: center;
-
     margin-bottom: 14px;
 }
 
 .ledger-header h2 {
     margin: 0;
-
     font-size: 18px;
 }
 
 .ledger-header select {
     width: auto;
-
     min-height: 34px;
 }
 
 .ledger-table {
     width: 100%;
-
     border-collapse: collapse;
-
     font-size: 13px;
 }
 
@@ -821,29 +879,21 @@ select:focus {
 
 .ledger-table th {
     text-align: left;
-
     color: var(--muted);
-
     font-size: 11px;
-
     text-transform: uppercase;
-
     letter-spacing: 0.03em;
-
     padding: 8px 10px;
-
     border-bottom: 1px solid var(--line);
 }
 
 .ledger-table td {
     padding: 10px;
-
     border-bottom: 1px solid var(--line);
 }
 
 .ledger-table .mono {
     font-family: monospace;
-
     font-size: 12px;
 }
 
@@ -855,6 +905,8 @@ select:focus {
 .ledger-row:hover {
     background-color: rgba(15, 118, 110, 0.04);
 }
+
+/* Receipt modal */
 
 .receipt-modal {
     position: fixed;
@@ -960,6 +1012,8 @@ select:focus {
 .stripe-card-small {
     min-width: 0;
 }
+
+/* Print receipt */
 
 @media print {
     @page {
