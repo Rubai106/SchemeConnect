@@ -20,12 +20,18 @@ const normalizeError = (error) => {
     }
 
     if (error.code === 11000) {
+        
         const duplicateField = getDuplicateField(error);
+        const collectionMatch = /collection:\s*\S+\.(\w+)/.exec(error.message || "");
+        const modelName = collectionMatch
+            ? collectionMatch[1].charAt(0).toUpperCase() + collectionMatch[1].slice(1, -1)
+            : "Record";
 
         return {
             statusCode: 409,
-            message: `User with this ${duplicateField} already exists`
+            message: `${modelName} with this ${duplicateField} already exists`
         };
+
     }
 
     if (error.name === "TokenExpiredError") {
