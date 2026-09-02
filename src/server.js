@@ -29,6 +29,9 @@ const caseRoutes = require("./routes/caseRoutes");
 const inspectionRoutes = require("./routes/inspectionRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 
+// Member 1 features
+const officeRoutes = require("./routes/officeRoutes");
+
 const requestLogger = require("./middleware/requestLogger");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 
@@ -40,6 +43,9 @@ app.use(cors());
 app.use(express.json());
 app.use(requestLogger);
 app.use(express.static(path.join(__dirname, "../public")));
+
+// Serve uploaded document files for the Document Vault.
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 // Authentication
 app.use("/api/auth", authRoutes);
@@ -63,6 +69,9 @@ app.use("/", dashboardRoutes);
 app.use("/api/schemes", schemeRoutes);
 app.use("/api/transactions", transactionRoutes);
 
+// Member 1 Nearby Welfare Office Navigator
+app.use("/api/offices", officeRoutes);
+
 app.get("/api/config", (req, res) => {
     res.json({
         success: true,
@@ -76,13 +85,22 @@ app.get("/", (req, res) => {
     res.send("SchemeConnect API is running...");
 });
 
-// Frontend routes from both branches
+// Expose non-secret frontend configuration.
+app.get("/api/config/maps-key", (req, res) => {
+    res.json({ key: process.env.GOOGLE_MAPS_API_KEY || "" });
+});
+
+// Frontend routes from all branches.
 app.get(
     [
         "/login",
         "/register",
         "/dashboard",
         "/eligibility",
+        "/documents",
+        "/schemes",
+        "/schemes/:id",
+        "/offices",
         "/console",
         "/console/beneficiaries",
         "/console/analytics",
@@ -103,5 +121,5 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 1234;
 
 app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });
