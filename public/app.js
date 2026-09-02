@@ -1,6 +1,21 @@
 const app = document.getElementById("app");
 const TOKEN_KEY = "schemeconnectToken";
 
+const loadStripeConfig = async () => {
+    if (window.__SCHEMECONNECT_STRIPE_PUBLISHABLE_KEY) {
+        return window.__SCHEMECONNECT_STRIPE_PUBLISHABLE_KEY;
+    }
+
+    try {
+        const result = await apiRequest("/api/config");
+        window.__SCHEMECONNECT_STRIPE_PUBLISHABLE_KEY =
+            result.data.stripePublishableKey;
+        return result.data.stripePublishableKey;
+    } catch (error) {
+        return null;
+    }
+};
+
 const getToken = () => localStorage.getItem(TOKEN_KEY);
 const setToken = (token) => localStorage.setItem(TOKEN_KEY, token);
 const clearToken = () => localStorage.removeItem(TOKEN_KEY);
@@ -9,17 +24,25 @@ const routes = {
     login: "/login",
     register: "/register",
     dashboard: "/dashboard",
+
+    // Fariha's routes
     eligibility: "/eligibility",
     console: "/console",
     consoleBeneficiaries: "/console/beneficiaries",
     consoleAnalytics: "/console/analytics",
     consoleAuditLog: "/console/audit-log",
-    consoleCirculars: "/console/circulars"
+    consoleCirculars: "/console/circulars",
+
+    // Main branch routes
+    schemeStudio: "/scheme-studio",
+    staff: "/staff",
+    finance: "/finance"
 };
 
 let currentUser = null;
 
-const roleDisplayLabel = (role) => (role === "Administrator" ? "Govt. Administrator" : role);
+const roleDisplayLabel = (role) =>
+    role === "Administrator" ? "Govt. Administrator" : role;
 
 const apiRequest = async (url, options = {}) => {
     const headers = {
@@ -47,7 +70,14 @@ const apiRequest = async (url, options = {}) => {
     }
 
     if (!response.ok) {
-        throw new Error(result.message || "Something went wrong.");
+        const error = new Error(
+            result.message || "Something went wrong."
+        );
+
+        error.status = response.status;
+        error.result = result;
+
+        throw error;
     }
 
     return result;
@@ -59,7 +89,9 @@ const navigate = (path) => {
 };
 
 const setPage = (content, activePage = "") => {
-    const isAuthPage = activePage === "login" || activePage === "register";
+    const isAuthPage =
+        activePage === "login" || activePage === "register";
+
     const isConsolePage = activePage.startsWith("console");
 
     app.innerHTML = `
@@ -69,7 +101,13 @@ const setPage = (content, activePage = "") => {
                     <span class="brand-mark"></span>
                     <div>
                         SchemeConnect
-                        <small>${isConsolePage ? "Govt. Administrator Console" : "Citizen Welfare Portal"}</small>
+                        <small>
+                            ${
+                                isConsolePage
+                                    ? "Govt. Administrator Console"
+                                    : "Citizen Welfare Portal"
+                            }
+                        </small>
                     </div>
                 </div>
 
@@ -77,25 +115,76 @@ const setPage = (content, activePage = "") => {
                     isAuthPage
                         ? `
                             <nav class="nav auth-nav" aria-label="Authentication navigation">
-                                <a href="/login" data-link class="${activePage === "login" ? "active" : ""}">Login</a>
-                                <a href="/register" data-link class="${activePage === "register" ? "active" : ""}">Register</a>
+                                <a href="/login" data-link class="${
+                                    activePage === "login" ? "active" : ""
+                                }">Login</a>
+
+                                <a href="/register" data-link class="${
+                                    activePage === "register" ? "active" : ""
+                                }">Register</a>
                             </nav>
                         `
                         : isConsolePage
                         ? `
                             <nav class="nav" aria-label="Administrator navigation">
-                                <a href="/console/beneficiaries" data-link class="${activePage === "consoleBeneficiaries" ? "active" : ""}">Beneficiary Records</a>
-                                <a href="/console/analytics" data-link class="${activePage === "consoleAnalytics" ? "active" : ""}">Performance Intelligence</a>
-                                <a href="/console/audit-log" data-link class="${activePage === "consoleAuditLog" ? "active" : ""}">Audit Log</a>
-                                <a href="/console/circulars" data-link class="${activePage === "consoleCirculars" ? "active" : ""}">Circulars</a>
+                                <a href="/console/beneficiaries"
+                                   data-link
+                                   class="${
+                                       activePage === "consoleBeneficiaries"
+                                           ? "active"
+                                           : ""
+                                   }">
+                                    Beneficiary Records
+                                </a>
+
+                                <a href="/console/analytics"
+                                   data-link
+                                   class="${
+                                       activePage === "consoleAnalytics"
+                                           ? "active"
+                                           : ""
+                                   }">
+                                    Performance Intelligence
+                                </a>
+
+                                <a href="/console/audit-log"
+                                   data-link
+                                   class="${
+                                       activePage === "consoleAuditLog"
+                                           ? "active"
+                                           : ""
+                                   }">
+                                    Audit Log
+                                </a>
+
+                                <a href="/console/circulars"
+                                   data-link
+                                   class="${
+                                       activePage === "consoleCirculars"
+                                           ? "active"
+                                           : ""
+                                   }">
+                                    Circulars
+                                </a>
                             </nav>
 
                             <div class="user-area">
                                 ${
                                     currentUser
                                         ? `
-                                            <span>${currentUser.fullName} (${roleDisplayLabel(currentUser.role)})</span>
-                                            <button class="logout-link" id="logoutButton" type="button">Logout</button>
+                                            <span>
+                                                ${currentUser.fullName}
+                                                (${roleDisplayLabel(
+                                                    currentUser.role
+                                                )})
+                                            </span>
+
+                                            <button
+                                                class="logout-link"
+                                                id="logoutButton"
+                                                type="button">
+                                                Logout
+                                            </button>
                                         `
                                         : ""
                                 }
@@ -103,18 +192,98 @@ const setPage = (content, activePage = "") => {
                         `
                         : `
                             <nav class="nav" aria-label="Primary navigation">
-                                <a href="/dashboard" data-link class="${activePage === "dashboard" ? "active" : ""}">Home</a>
-                                <a href="/eligibility" data-link class="${activePage === "eligibility" ? "active" : ""}">Eligibility</a>
-                                <span aria-disabled="true">Documents</span>
-                                <span aria-disabled="true">Offices</span>
+                                <a href="/dashboard"
+                                   data-link
+                                   class="${
+                                       activePage === "dashboard"
+                                           ? "active"
+                                           : ""
+                                   }">
+                                    Home
+                                </a>
+
+                                <a href="/eligibility"
+                                   data-link
+                                   class="${
+                                       activePage === "eligibility"
+                                           ? "active"
+                                           : ""
+                                   }">
+                                    Eligibility
+                                </a>
+
+                                ${
+                                    currentUser
+                                        ? `
+                                            ${
+                                                currentUser.role ===
+                                                "Administrator"
+                                                    ? `
+                                                        <a href="/staff"
+                                                           data-link
+                                                           class="${
+                                                               activePage ===
+                                                               "staff"
+                                                                   ? "active"
+                                                                   : ""
+                                                           }">
+                                                            Staff Management
+                                                        </a>
+                                                    `
+                                                    : ""
+                                            }
+
+                                            <a href="/finance"
+                                               data-link
+                                               class="${
+                                                   activePage === "finance"
+                                                       ? "active"
+                                                       : ""
+                                               }">
+                                                Finance Dashboard
+                                            </a>
+
+                                            <a href="/scheme-studio"
+                                               data-link
+                                               class="${
+                                                   activePage ===
+                                                   "scheme-studio"
+                                                       ? "active"
+                                                       : ""
+                                               }">
+                                                Scheme Studio
+                                            </a>
+                                        `
+                                        : ""
+                                }
+
+                                <span aria-disabled="true">
+                                    Documents
+                                </span>
+
+                                <span aria-disabled="true">
+                                    Offices
+                                </span>
                             </nav>
 
                             <div class="user-area">
                                 ${
                                     currentUser
                                         ? `
-                                            <span>${currentUser.fullName}</span>
-                                            <button class="logout-link" id="logoutButton" type="button">Logout</button>
+                                            <span>
+                                                ${currentUser.fullName}
+                                                ·
+                                                ${roleDisplayLabel(
+                                                    currentUser.role
+                                                )}
+                                            </span>
+
+                                            <button
+                                                class="logout-link"
+                                                id="logoutButton"
+                                                type="button">
+                                                Logout
+                                            </button>
                                         `
                                         : ""
                                 }
@@ -171,12 +340,24 @@ const loadCurrentUser = async () => {
         return null;
     }
 };
-
-const requireAuth = async () => {
+const requireAuth = async (
+    allowedRoles = [
+        "Citizen",
+        "Administrator",
+        "Finance Officer",
+        "Verification Officer",
+        "Auditor"
+    ]
+) => {
     const user = await loadCurrentUser();
 
-    if (!user || user.role !== "Citizen") {
+    if (!user) {
         navigate(routes.login);
+        return false;
+    }
+
+    if (allowedRoles && !allowedRoles.includes(user.role)) {
+        navigate(routes.dashboard);
         return false;
     }
 
@@ -249,10 +430,20 @@ const renderLogin = () => {
             setToken(result.data.token);
             currentUser = result.data.user;
 
+            // Citizens go to the citizen dashboard.
+            // Staff/admin users go to the appropriate management area.
             if (currentUser.role === "Citizen") {
                 navigate(routes.dashboard);
-            } else {
+            } else if (currentUser.role === "Administrator") {
                 navigate(routes.consoleBeneficiaries);
+            } else if (currentUser.role === "Finance Officer") {
+                navigate(routes.finance);
+            } else if (currentUser.role === "Verification Officer") {
+                navigate(routes.dashboard);
+            } else if (currentUser.role === "Auditor") {
+                navigate(routes.consoleAuditLog);
+            } else {
+                navigate(routes.dashboard);
             }
         } catch (error) {
             showMessage(error.message);
@@ -323,7 +514,6 @@ const renderRegister = () => {
         `,
         "register"
     );
-
     document.getElementById("registerForm").addEventListener("submit", async (event) => {
         event.preventDefault();
 
@@ -357,39 +547,86 @@ const renderRegister = () => {
         }
     });
 };
-
 const renderDashboard = async () => {
     if (!(await requireAuth())) {
         return;
     }
 
+    const isCitizen = currentUser.role === "Citizen";
+
+    const dashboardTitle =
+        currentUser.role === "Administrator"
+            ? "Admin Dashboard"
+            : currentUser.role === "Finance Officer"
+            ? "Finance Dashboard"
+            : currentUser.role === "Verification Officer"
+            ? "Verification Dashboard"
+            : currentUser.role === "Auditor"
+            ? "Auditor Dashboard"
+            : "Citizen Dashboard";
+
+    const servicesMessage =
+        currentUser.role === "Administrator"
+            ? "Staff management, scheme control, and oversight are available."
+            : currentUser.role === "Finance Officer"
+            ? "Financial disbursement and budget monitoring are available."
+            : currentUser.role === "Verification Officer"
+            ? "Beneficiary verification and related services are available."
+            : currentUser.role === "Auditor"
+            ? "Audit logs, analytics, and oversight tools are available."
+            : "Your citizen services and welfare eligibility tools are available.";
+
     setPage(
         `
         <section class="page-title">
-            <h1>Citizen Dashboard</h1>
-            <p>Welcome, ${currentUser.fullName}. Manage your available services.</p>
+            <h1>${dashboardTitle}</h1>
+            <p>Welcome, ${currentUser.fullName}. Manage your SchemeConnect account.</p>
         </section>
 
         <section class="dashboard-grid">
             <div class="card summary-card">
-                <h2>Eligibility Profile</h2>
-                <p>Create or update your household and income information for welfare eligibility checks.</p>
-                <button class="button primary" id="openEligibility" type="button">Open Eligibility</button>
-            </div>
-
-            <div class="card summary-card">
                 <h2>Account Information</h2>
                 <p>${currentUser.email}</p>
+                <p>${roleDisplayLabel(currentUser.role)}</p>
                 <p>${currentUser.division}, ${currentUser.district}</p>
+            </div>
+
+            ${
+                isCitizen
+                    ? `
+                        <div class="card summary-card">
+                            <h2>Eligibility Profile</h2>
+                            <p>
+                                Create or update your household and income
+                                information for welfare eligibility checks.
+                            </p>
+                            <button
+                                class="button primary"
+                                id="openEligibility"
+                                type="button">
+                                Open Eligibility
+                            </button>
+                        </div>
+                    `
+                    : ""
+            }
+
+            <div class="card summary-card">
+                <h2>Available Services</h2>
+                <p>${servicesMessage}</p>
             </div>
         </section>
         `,
         "dashboard"
     );
 
-    document.getElementById("openEligibility").addEventListener("click", () => {
-        navigate(routes.eligibility);
-    });
+    const openEligibility = document.getElementById("openEligibility");
+
+    if (openEligibility) {
+        openEligibility.addEventListener("click", () => {
+            navigate(routes.eligibility);
+        });
+    }
 };
 
 const profileTemplate = (profile) => `
@@ -508,8 +745,230 @@ const getProfilePayload = (form) => ({
     district: form.district.value.trim()
 });
 
+const renderStaffManagement = async () => {
+    if (!(await requireAuth(["Administrator"]))) {
+        return;
+    }
+
+    setPage(
+        `
+        <section class="page-title">
+            <h1>Staff Management</h1>
+            <p>Create and manage administrator and finance staff accounts.</p>
+        </section>
+
+        <section class="studio-grid staff-layout">
+            <div class="card">
+                <h2>Create Staff Account</h2>
+                <div id="staffFormMessage" class="message error" hidden></div>
+                <form id="staffForm">
+                    <div class="form-row">
+                        <label for="staffFullName">Full Name</label>
+                        <input id="staffFullName" name="fullName" required>
+                    </div>
+                    <div class="form-row">
+                        <label for="staffEmail">Email</label>
+                        <input id="staffEmail" name="email" type="email" required>
+                    </div>
+                    <div class="form-row">
+                        <label for="staffPassword">Password</label>
+                        <input id="staffPassword" name="password" type="password" required>
+                    </div>
+                    <div class="form-row">
+                        <label for="staffRole">Role</label>
+                        <select id="staffRole" name="role">
+                            <option value="Administrator">Administrator</option>
+                            <option value="Finance Officer">Finance Officer</option>
+                            <option value="Verification Officer">Verification Officer</option>
+                            <option value="Auditor">Auditor</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label for="staffDivision">Division</label>
+                        <input id="staffDivision" name="division" required>
+                    </div>
+                    <div class="form-row">
+                        <label for="staffDistrict">District</label>
+                        <input id="staffDistrict" name="district" required>
+                    </div>
+                    <div class="actions">
+                        <button class="button primary" type="submit">Create Staff</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2>Staff Directory</h2>
+                <div id="staffList"><p class="empty-note">Loading staff…</p></div>
+            </div>
+        </section>
+        `,
+        "staff"
+    );
+
+    const renderStaffList = async () => {
+        const staffList = document.getElementById("staffList");
+
+        try {
+            const result = await apiRequest("/api/auth/staff");
+            const users = result.data.users;
+
+            if (!users.length) {
+                staffList.innerHTML = `<p class="empty-note">No staff accounts found.</p>`;
+                return;
+            }
+
+            staffList.innerHTML = `
+                <div class="table-scroll">
+                    <table class="ledger-table staff-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Division</th>
+                                <th>District</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${users.map((user) => `
+                                <tr>
+                                    <td>${user.fullName}</td>
+                                    <td>${user.email}</td>
+                                    <td><span class="badge badge-success">${user.role}</span></td>
+                                    <td>${user.division}</td>
+                                    <td>${user.district}</td>
+                                </tr>
+                            `).join("")}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        } catch (error) {
+            staffList.innerHTML = `<p class="empty-note">Unable to load staff.</p>`;
+        }
+    };
+
+    document.getElementById("staffForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const form = event.target;
+        const button = form.querySelector("button");
+        const messageBox = document.getElementById("staffFormMessage");
+
+        button.disabled = true;
+        button.textContent = "Creating...";
+        messageBox.hidden = true;
+
+        try {
+            await apiRequest("/api/auth/staff", {
+                method: "POST",
+                body: JSON.stringify({
+                    fullName: form.fullName.value.trim(),
+                    email: form.email.value.trim(),
+                    password: form.password.value,
+                    role: form.role.value,
+                    division: form.division.value.trim(),
+                    district: form.district.value.trim()
+                })
+            });
+
+            form.reset();
+            await renderStaffList();
+            messageBox.className = "message success";
+            messageBox.textContent = "Staff account created successfully.";
+            messageBox.hidden = false;
+        } catch (error) {
+            messageBox.className = "message error";
+            messageBox.textContent = error.message;
+            messageBox.hidden = false;
+        } finally {
+            button.disabled = false;
+            button.textContent = "Create Staff";
+        }
+    });
+
+    await renderStaffList();
+};
+
+const renderFinanceDashboard = async () => {
+    if (!(await requireAuth(["Finance Officer", "Administrator"]))) {
+        return;
+    }
+
+    setPage(
+        `
+        <section class="page-title">
+            <h1>Finance Dashboard</h1>
+            <p>Track disbursements, budgets, and transaction activity.</p>
+        </section>
+
+        <section class="dashboard-grid">
+            <div class="card summary-card">
+                <h2>Overview</h2>
+                <p>Monitoring active welfare schemes and expenditures.</p>
+            </div>
+            <div class="card summary-card">
+                <h2>Access Level</h2>
+                <p>${currentUser.role}</p>
+            </div>
+        </section>
+
+        <section class="card" style="margin-top: 18px;">
+            <div class="ledger-header">
+                <h2>Finance Ledger</h2>
+                <select id="financeStatusFilter">
+                    <option value="">All statuses</option>
+                    <option value="Successful">Successful</option>
+                    <option value="Failed">Failed</option>
+                </select>
+            </div>
+            <table class="ledger-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Scheme</th>
+                        <th>Beneficiary</th>
+                        <th>Amount</th>
+                        <th>Reference</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="financeLedgerBody">
+                    <tr><td colspan="6" class="empty-note">Loading ledger…</td></tr>
+                </tbody>
+            </table>
+        </section>
+        `,
+        "finance"
+    );
+
+    const loadFinanceLedger = async (statusFilter = "") => {
+        const tableBody = document.getElementById("financeLedgerBody");
+
+        if (!tableBody) {
+            return;
+        }
+
+        try {
+            const query = statusFilter ? `?status=${statusFilter}` : "";
+            const result = await apiRequest(`/api/transactions${query}`);
+            tableBody.innerHTML = renderLedgerRows(result.data.ledger);
+            attachLedgerRowClicks();
+        } catch (error) {
+            tableBody.innerHTML = `<tr><td colspan="6" class="empty-note">Unable to load ledger.</td></tr>`;
+        }
+    };
+
+    document.getElementById("financeStatusFilter").addEventListener("change", (event) => {
+        loadFinanceLedger(event.target.value);
+    });
+
+    await loadFinanceLedger();
+};
+
 const renderEligibility = async () => {
-    if (!(await requireAuth())) {
+    if (!(await requireAuth(["Citizen"]))) {
         return;
     }
 
@@ -1425,12 +1884,640 @@ const renderConsoleCirculars = async () => {
     await loadCirculars();
 };
 
+// =========================
+// SCHEME CONFIGURATION STUDIO  (Module 1, Feature 3)
+// =========================
+
+const schemeStudioRoles = ["Administrator", "Finance Officer", "Auditor"];
+
+const formatMoney = (amount) => `৳${Number(amount).toLocaleString()}`;
+
+const categoryOptions = ["Agriculture", "Education", "Healthcare", "Disability", "Women", "SME", "Housing"];
+
+const loadBudgetSummary = async (schemeId, targetElement) => {
+    try {
+        const result = await apiRequest(`/api/schemes/${schemeId}/budget`);
+        const summary = result.data;
+        const usedPercent = 100 - summary.remainingPercent;
+
+        targetElement.innerHTML = `
+            <div class="budget-meta">
+                <span>Used: ${formatMoney(summary.utilizedBudget)}</span>
+                <span>Remaining: ${formatMoney(summary.remainingBudget)}</span>
+            </div>
+            <div class="budget-track">
+                <div class="budget-fill ${summary.lowBudgetAlert ? "danger" : ""}" style="width:${Math.min(usedPercent, 100)}%"></div>
+            </div>
+            ${summary.lowBudgetAlert ? `<p class="budget-alert">Low budget: only ${summary.remainingPercent}% remaining</p>` : ""}
+        `;
+    } catch (error) {
+        targetElement.innerHTML = `<p class="budget-meta">Unable to load budget.</p>`;
+    }
+};
+
+const renderSchemeCards = (schemes, canEdit = false) => {
+    if (schemes.length === 0) {
+        return `<p class="empty-note">No schemes yet. Create one on the left to get started.</p>`;
+    }
+
+    return schemes
+        .map(
+            (scheme) => `
+            <div class="card scheme-card" data-scheme-id="${scheme._id}">
+                <div class="scheme-card-top">
+                    <div>
+                        <h3>${scheme.name}</h3>
+                        <p class="scheme-category">${scheme.category}</p>
+                    </div>
+                    <span class="badge badge-${scheme.status.toLowerCase()}">${scheme.status}</span>
+                </div>
+                <p class="scheme-budget-line">Allocated: ${formatMoney(scheme.allocatedBudget)}</p>
+                <div class="budget-box" id="budget-${scheme._id}">
+                    <p class="budget-meta">Loading budget…</p>
+                </div>
+                ${canEdit ? `<button class="button secondary edit-scheme-button" type="button" data-scheme-id="${scheme._id}">
+                    Edit
+                </button>` : ""}
+                <button class="button secondary select-scheme-button" type="button" data-scheme-id="${scheme._id}" data-scheme-name="${scheme.name}" data-scheme-status="${scheme.status}">
+                    Select for Disbursement
+                </button>
+            </div>
+        `
+        )
+        .join("");
+};
+
+const renderLedgerRows = (ledger) => {
+    if (ledger.length === 0) {
+        return `<tr><td colspan="6" class="empty-note">No transactions yet.</td></tr>`;
+    }
+
+    return ledger
+        .map(
+            (transaction) => `
+            <tr class="ledger-row" data-transaction-id="${transaction._id}" title="View receipt">
+                <td>${new Date(transaction.createdAt).toLocaleDateString()}</td>
+                <td>${transaction.scheme ? transaction.scheme.name : "—"}</td>
+                <td>${transaction.beneficiaryName}</td>
+                <td>${formatMoney(transaction.amount)}</td>
+                <td class="mono">${transaction.gatewayReference || "—"}</td>
+                <td><span class="badge badge-${transaction.status.toLowerCase()}">${transaction.status}</span></td>
+            </tr>
+        `
+        )
+        .join("");
+};
+
+const ensureReceiptModal = () => {
+    let modal = document.getElementById("receiptModal");
+
+    if (modal) {
+        return modal;
+    }
+
+    modal = document.createElement("div");
+    modal.id = "receiptModal";
+    modal.className = "receipt-modal hidden";
+    modal.innerHTML = `
+        <div class="receipt-modal-backdrop" data-close-receipt="true"></div>
+        <div class="receipt-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="receiptTitle">
+            <div class="receipt-modal-header">
+                <h3 id="receiptTitle">Disbursement Receipt</h3>
+                <button type="button" class="button secondary" data-close-receipt="true">Close</button>
+            </div>
+            <div id="receiptContent" class="receipt-content"></div>
+            <div class="receipt-modal-actions">
+                <button type="button" class="button primary" id="printReceiptButton">Print</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.addEventListener("click", (event) => {
+        if (event.target.dataset.closeReceipt === "true") {
+            modal.classList.add("hidden");
+        }
+    });
+
+    document.getElementById("printReceiptButton").addEventListener("click", () => {
+        window.print();
+    });
+
+    return modal;
+};
+
+const openReceiptModal = async (transactionId) => {
+    const modal = ensureReceiptModal();
+    const receiptContent = document.getElementById("receiptContent");
+
+    receiptContent.innerHTML = "<p class=\"empty-note\">Loading receipt…</p>";
+    modal.classList.remove("hidden");
+
+    try {
+        const result = await apiRequest(`/api/transactions/${transactionId}`);
+        const transaction = result.data.transaction;
+        const amount = Number(transaction.amount || 0);
+        const schemeName = transaction.scheme ? transaction.scheme.name : "—";
+        const createdAt = transaction.createdAt ? new Date(transaction.createdAt).toLocaleString() : "—";
+
+        receiptContent.innerHTML = `
+            <div class="receipt-card">
+                <div class="receipt-brand">
+                    <h4>SchemeConnect</h4>
+                    <span>Disbursement Receipt</span>
+                </div>
+                <div class="receipt-grid">
+                    <div><strong>Beneficiary</strong><span>${transaction.beneficiaryName || "—"}</span></div>
+                    <div><strong>Phone</strong><span>${transaction.beneficiaryPhone || "—"}</span></div>
+                    <div><strong>Scheme</strong><span>${schemeName}</span></div>
+                    <div><strong>Amount</strong><span>${formatMoney(amount)}</span></div>
+                    <div><strong>Reference</strong><span class="mono">${transaction.gatewayReference || "—"}</span></div>
+                    <div><strong>Status</strong><span class="badge badge-${transaction.status.toLowerCase()}">${transaction.status}</span></div>
+                    <div><strong>Date</strong><span>${createdAt}</span></div>
+                    <div><strong>Payment Gateway</strong><span>${transaction.paymentGateway || "—"}</span></div>
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        receiptContent.innerHTML = `<p class="empty-note">Unable to load receipt.</p>`;
+    }
+};
+
+const attachLedgerRowClicks = () => {
+    document.querySelectorAll(".ledger-row").forEach((row) => {
+        row.onclick = () => openReceiptModal(row.dataset.transactionId);
+    });
+};
+
+const loadLedger = async (statusFilter = "") => {
+    const tableBody = document.getElementById("ledgerBody");
+
+    if (!tableBody) {
+        return;
+    }
+
+    try {
+        const query = statusFilter ? `?status=${statusFilter}` : "";
+        const result = await apiRequest(`/api/transactions${query}`);
+        tableBody.innerHTML = renderLedgerRows(result.data.ledger);
+        attachLedgerRowClicks();
+    } catch (error) {
+        tableBody.innerHTML = `<tr><td colspan="6" class="empty-note">Unable to load ledger.</td></tr>`;
+    }
+};
+
+let selectedScheme = null;
+
+const renderDisbursementPanel = async () => {
+    const panel = document.getElementById("disbursementPanel");
+
+    if (!panel) {
+        return;
+    }
+
+    if (currentUser.role !== "Finance Officer") {
+        panel.innerHTML = `<p class="empty-note">Only Finance Officers can disburse funds.</p>`;
+        return;
+    }
+
+    if (!selectedScheme) {
+        panel.innerHTML = `<p class="empty-note">Select a scheme from the list to disburse funds.</p>`;
+        return;
+    }
+
+    panel.innerHTML = `
+        <h2>Disburse Funds — ${selectedScheme.name}</h2>
+        <div id="disbursementMessage" class="message error" hidden></div>
+        <form id="disbursementForm">
+            <div class="form-row">
+                <label for="beneficiaryName">Beneficiary Name</label>
+                <input id="beneficiaryName" name="beneficiaryName" required>
+            </div>
+            <div class="form-row">
+                <label for="beneficiaryPhone">Beneficiary Phone</label>
+                <input id="beneficiaryPhone" name="beneficiaryPhone" placeholder="01XXXXXXXXX" required>
+            </div>
+            <div class="form-row">
+                <label for="amount">Amount (BDT)</label>
+                <input id="amount" name="amount" type="number" min="0" required>
+            </div>
+            <div class="form-row">
+                <label>Card Information</label>
+                <div class="stripe-card-stack">
+                    <div id="card-number-element" class="stripe-card-field"></div>
+                    <div class="stripe-card-row">
+                        <div id="card-expiry-element" class="stripe-card-field stripe-card-small"></div>
+                        <div id="card-cvc-element" class="stripe-card-field stripe-card-small"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="actions">
+                <button class="button primary" type="submit">Pay with Stripe</button>
+            </div>
+        </form>
+    `;
+
+    const stripePublishableKey = await loadStripeConfig();
+
+    if (!window.Stripe || !stripePublishableKey) {
+        const messageBox = document.getElementById("disbursementMessage");
+        messageBox.className = "message error";
+        messageBox.textContent = "Stripe.js failed to load or the Stripe publishable key is missing.";
+        messageBox.hidden = false;
+        return;
+    }
+
+    const stripe = Stripe(stripePublishableKey);
+    const elements = stripe.elements({
+        appearance: {
+            disablePlaceholders: true
+        }
+    });
+    const cardNumber = elements.create("cardNumber", {
+        style: {
+            base: {
+                color: "#1f2937",
+                fontFamily: "Arial, sans-serif",
+                fontSize: "16px",
+                iconColor: "#0f766e"
+            }
+        }
+    });
+    const cardExpiry = elements.create("cardExpiry", {
+        style: {
+            base: {
+                color: "#1f2937",
+                fontFamily: "Arial, sans-serif",
+                fontSize: "16px",
+                iconColor: "#0f766e"
+            }
+        }
+    });
+    const cardCvc = elements.create("cardCvc", {
+        style: {
+            base: {
+                color: "#1f2937",
+                fontFamily: "Arial, sans-serif",
+                fontSize: "16px",
+                iconColor: "#0f766e"
+            }
+        }
+    });
+
+    cardNumber.mount("#card-number-element");
+    cardExpiry.mount("#card-expiry-element");
+    cardCvc.mount("#card-cvc-element");
+
+    document.getElementById("disbursementForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const form = event.target;
+        const button = form.querySelector("button");
+        const messageBox = document.getElementById("disbursementMessage");
+
+        button.disabled = true;
+        button.textContent = "Processing payment...";
+        messageBox.hidden = true;
+
+        try {
+            const result = await apiRequest("/api/transactions/disburse", {
+                method: "POST",
+                body: JSON.stringify({
+                    schemeId: selectedScheme._id,
+                    beneficiaryName: form.beneficiaryName.value.trim(),
+                    beneficiaryPhone: form.beneficiaryPhone.value.trim(),
+                    amount: Number(form.amount.value)
+                })
+            });
+
+            const { clientSecret, transaction } = result.data;
+
+            if (!clientSecret) {
+                const isSuccessful = transaction.status === "Successful";
+                messageBox.className = `message ${isSuccessful ? "success" : "error"}`;
+                messageBox.textContent = `${result.message}${transaction.gatewayReference ? " — Ref: " + transaction.gatewayReference : ""}`;
+                messageBox.hidden = false;
+                form.reset();
+                loadLedger();
+                loadBudgetSummary(selectedScheme._id, document.getElementById(`budget-${selectedScheme._id}`));
+                return;
+            }
+
+            const paymentResult = await stripe.confirmCardPayment(clientSecret, {
+                payment_method: {
+                    card: cardNumber,
+                    billing_details: {
+                        name: form.beneficiaryName.value.trim(),
+                        phone: form.beneficiaryPhone.value.trim()
+                    }
+                }
+            });
+
+            if (paymentResult.error) {
+                try {
+                    await apiRequest(`/api/transactions/${transaction._id}/confirm`, {
+                        method: "POST",
+                        body: JSON.stringify({
+                            status: "failed"
+                        })
+                    });
+                } catch (confirmError) {
+                    // ignore confirm error and keep the original card error visible
+                }
+
+                loadLedger();
+                loadBudgetSummary(selectedScheme._id, document.getElementById(`budget-${selectedScheme._id}`));
+                throw new Error(paymentResult.error.message || "Card payment failed.");
+            }
+
+            if (paymentResult.paymentIntent && paymentResult.paymentIntent.status === "succeeded") {
+                const confirmation = await apiRequest(`/api/transactions/${transaction._id}/confirm`, {
+                    method: "POST",
+                    body: JSON.stringify({
+                        paymentIntentId: paymentResult.paymentIntent.id,
+                        status: paymentResult.paymentIntent.status
+                    })
+                });
+
+                messageBox.className = "message success";
+                messageBox.textContent = `${confirmation.message} — Ref: ${confirmation.data.transaction.gatewayReference}`;
+                messageBox.hidden = false;
+
+                form.reset();
+                loadLedger();
+                loadBudgetSummary(selectedScheme._id, document.getElementById(`budget-${selectedScheme._id}`));
+            }
+        } catch (error) {
+            const failedTransaction = error.result && error.result.data && error.result.data.transaction
+                ? error.result.data.transaction
+                : null;
+
+            if (failedTransaction) {
+                messageBox.className = "message error";
+                messageBox.textContent = `${error.result.message} — Failed transaction recorded.`;
+                messageBox.hidden = false;
+                form.reset();
+                loadLedger();
+                loadBudgetSummary(selectedScheme._id, document.getElementById(`budget-${selectedScheme._id}`));
+            } else {
+                messageBox.className = "message error";
+                messageBox.textContent = error.message;
+                messageBox.hidden = false;
+            }
+        } finally {
+            button.disabled = false;
+            button.textContent = "Pay with Stripe";
+        }
+    });
+};
+
+const attachSchemeCardListeners = () => {
+    document.querySelectorAll(".edit-scheme-button").forEach((button) => {
+        button.addEventListener("click", () => {
+            startSchemeEdit(button.getAttribute("data-scheme-id"));
+        });
+    });
+
+    document.querySelectorAll(".select-scheme-button").forEach((button) => {
+        button.addEventListener("click", () => {
+            selectedScheme = {
+                _id: button.getAttribute("data-scheme-id"),
+                name: button.getAttribute("data-scheme-name"),
+                status: button.getAttribute("data-scheme-status")
+            };
+            renderDisbursementPanel();
+        });
+    });
+
+    document.querySelectorAll(".scheme-card").forEach((card) => {
+        loadBudgetSummary(card.getAttribute("data-scheme-id"), document.getElementById(`budget-${card.getAttribute("data-scheme-id")}`));
+    });
+};
+
+const resetSchemeForm = (form) => {
+    form.reset();
+    form.schemeId.value = "";
+    form.status.value = "Draft";
+    form.status.disabled = true;
+    document.getElementById("statusField").hidden = true;
+    document.getElementById("cancelSchemeEdit").hidden = true;
+    form.querySelector('button[type="submit"]').textContent = "Create Scheme";
+};
+
+const startSchemeEdit = async (schemeId) => {
+    const form = document.getElementById("schemeForm");
+    const messageBox = document.getElementById("schemeFormMessage");
+
+    try {
+        const result = await apiRequest(`/api/schemes/${schemeId}`);
+        const scheme = result.data.scheme;
+
+        form.schemeId.value = scheme._id;
+        form.name.value = scheme.name;
+        form.category.value = scheme.category;
+        form.benefitAmount.value = scheme.benefitAmount;
+        form.allocatedBudget.value = scheme.allocatedBudget;
+        form.eligibilityCriteria.value = scheme.eligibilityCriteria;
+        form.status.value = scheme.status;
+        form.status.disabled = false;
+        document.getElementById("statusField").hidden = false;
+        document.getElementById("cancelSchemeEdit").hidden = false;
+        form.querySelector('button[type="submit"]').textContent = "Update Scheme";
+        messageBox.hidden = true;
+        form.scrollIntoView({ behavior: "smooth", block: "start" });
+        form.name.focus();
+    } catch (error) {
+        messageBox.className = "message error";
+        messageBox.textContent = error.message;
+        messageBox.hidden = false;
+    }
+};
+
+const loadSchemeList = async (canEdit = currentUser && currentUser.role === "Administrator") => {
+    const listElement = document.getElementById("schemeList");
+
+    try {
+        const result = await apiRequest("/api/schemes");
+        listElement.innerHTML = renderSchemeCards(result.data.schemes, canEdit);
+        attachSchemeCardListeners();
+    } catch (error) {
+        listElement.innerHTML = `<p class="empty-note">Unable to load schemes.</p>`;
+    }
+};
+
+const renderSchemeStudio = async () => {
+    if (!(await requireAuth())) {
+        return;
+    }
+
+    selectedScheme = null;
+
+    const canCreateScheme = currentUser.role === "Administrator";
+    const canEdit = currentUser.role === "Administrator";
+
+    setPage(
+        `
+        <section class="page-title">
+            <h1>Welfare Scheme Configuration Studio</h1>
+            <p>Configure schemes, monitor budgets, disburse funds, and review the audit ledger.</p>
+        </section>
+
+        <section class="studio-grid">
+            <div class="card" id="schemeFormCard" ${canCreateScheme ? "" : "hidden"}>
+                <h2>Create New Scheme</h2>
+                <div id="schemeFormMessage" class="message error" hidden></div>
+                <form id="schemeForm">
+                    <input type="hidden" id="schemeId" name="schemeId" value="">
+                    <div class="form-row full">
+                        <label for="name">Scheme Name</label>
+                        <input id="name" name="name" required>
+                    </div>
+                    <div class="form-row">
+                        <label for="category">Category</label>
+                        <select id="category" name="category">
+                            ${categoryOptions.map((option) => `<option value="${option}">${option}</option>`).join("")}
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label for="benefitAmount">Benefit Amount (BDT)</label>
+                        <input id="benefitAmount" name="benefitAmount" type="number" min="0" required>
+                    </div>
+                    <div class="form-row">
+                        <label for="allocatedBudget">Allocated Budget (BDT)</label>
+                        <input id="allocatedBudget" name="allocatedBudget" type="number" min="0" required>
+                    </div>
+                    <div class="form-row full">
+                        <label for="eligibilityCriteria">Eligibility Criteria</label>
+                        <input id="eligibilityCriteria" name="eligibilityCriteria" required placeholder="e.g. Household income below 15,000 BDT/month">
+                    </div>
+                    <div class="form-row" id="statusField" hidden>
+                        <label for="status">Status</label>
+                        <select id="status" name="status" disabled>
+                            <option value="Draft">Draft</option>
+                            <option value="Active">Active</option>
+                            <option value="Paused">Paused</option>
+                            <option value="Closed">Closed</option>
+                        </select>
+                    </div>
+                    <div class="actions">
+                        <button class="button primary" type="submit">Create Scheme</button>
+                        <button class="button secondary" id="cancelSchemeEdit" type="button" hidden>Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card" id="schemeListCard">
+                <h2>Schemes</h2>
+                <div id="schemeList"><p class="empty-note">Loading schemes…</p></div>
+            </div>
+
+            <div class="card" id="disbursementPanel"></div>
+        </section>
+
+        <section class="card" style="margin-top: 18px;">
+            <div class="ledger-header">
+                <h2>Financial Ledger</h2>
+                <select id="ledgerStatusFilter">
+                    <option value="">All statuses</option>
+                    <option value="Successful">Successful</option>
+                    <option value="Failed">Failed</option>
+                </select>
+            </div>
+            <table class="ledger-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Scheme</th>
+                        <th>Beneficiary</th>
+                        <th>Amount</th>
+                        <th>Reference</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="ledgerBody">
+                    <tr><td colspan="6" class="empty-note">Loading ledger…</td></tr>
+                </tbody>
+            </table>
+        </section>
+        `,
+        "scheme-studio"
+    );
+
+    renderDisbursementPanel();
+    loadSchemeList(canEdit);
+    loadLedger();
+
+    document.getElementById("ledgerStatusFilter").addEventListener("change", (event) => {
+        loadLedger(event.target.value);
+    });
+
+    if (canCreateScheme) {
+        const form = document.getElementById("schemeForm");
+        const cancelButton = document.getElementById("cancelSchemeEdit");
+
+        cancelButton.addEventListener("click", () => {
+            resetSchemeForm(form);
+        });
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const button = form.querySelector('button[type="submit"]');
+            const messageBox = document.getElementById("schemeFormMessage");
+            const schemeId = form.schemeId.value.trim();
+            const isEditing = Boolean(schemeId);
+            const payload = {
+                name: form.name.value.trim(),
+                category: form.category.value,
+                eligibilityCriteria: form.eligibilityCriteria.value.trim(),
+                benefitAmount: Number(form.benefitAmount.value),
+                allocatedBudget: Number(form.allocatedBudget.value)
+            };
+
+            if (isEditing) {
+                payload.status = form.status.value;
+            }
+
+            button.disabled = true;
+            button.textContent = isEditing ? "Updating..." : "Creating...";
+            messageBox.hidden = true;
+
+            try {
+                await apiRequest(isEditing ? `/api/schemes/${schemeId}` : "/api/schemes", {
+                    method: isEditing ? "PUT" : "POST",
+                    body: JSON.stringify(payload)
+                });
+
+                resetSchemeForm(form);
+                loadSchemeList(canEdit);
+            } catch (error) {
+                messageBox.className = "message error";
+                messageBox.textContent = error.message;
+                messageBox.hidden = false;
+            } finally {
+                button.disabled = false;
+                button.textContent = form.schemeId.value ? "Update Scheme" : "Create Scheme";
+            }
+        });
+    }
+};
+
+
+
+
+
+
+
+
+
 const logout = async () => {
     try {
         await apiRequest("/api/auth/logout", {
             method: "POST"
         });
     } catch (error) {
+        // JWT logout is stateless.
     }
 
     clearToken();
@@ -1443,6 +2530,16 @@ const render = async () => {
 
     if (path === routes.register) {
         renderRegister();
+        return;
+    }
+
+    if (path === routes.staff) {
+        await renderStaffManagement();
+        return;
+    }
+
+    if (path === routes.finance) {
+        await renderFinanceDashboard();
         return;
     }
 
@@ -1481,8 +2578,17 @@ const render = async () => {
         return;
     }
 
+    if (path === routes.schemeStudio) {
+        await renderSchemeStudio();
+
+        return;
+    }
+
     renderLogin();
 };
 
 window.addEventListener("popstate", render);
 render();
+
+
+

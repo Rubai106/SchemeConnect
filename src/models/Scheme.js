@@ -1,36 +1,92 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
+const SCHEME_CATEGORY = require("../constants/schemeCategory");
+const SCHEME_STATUS = require("../constants/schemeStatus");
 
 const schemeSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true, trim: true },
-    description: { type: String, required: true },
-    category: {
+    name: {
       type: String,
       required: true,
-      enum: ['agriculture', 'education', 'healthcare', 'disability', 'women', 'sme', 'housing']
+      trim: true
     },
+
+    category: {
+      type: String,
+      enum: Object.values(SCHEME_CATEGORY),
+      required: true
+    },
+
+    description: {
+      type: String,
+      trim: true,
+      default: ""
+    },
+
     eligibilityCriteria: {
+      type: String,
+      required: true,
+      trim: true
+    },
+
+    eligibilityDetails: {
       minIncome: Number,
       maxIncome: Number,
       occupationTypes: [String],
-      disabilityRequired: { type: Boolean, default: false },
+      disabilityRequired: {
+        type: Boolean,
+        default: false
+      },
       minEducation: String,
       maxFamilySize: Number,
-      eligibleDistricts: [String] // empty/omitted = all districts
+      eligibleDistricts: [String]
     },
-    requiredDocuments: [String], // e.g. ['National ID', 'Income Certificate']
-    benefitAmount: { type: Number, required: true },
-    applicationDeadline: { type: Date, required: true },
-    budgetAllocated: { type: Number, required: true, default: 0 },
-    budgetUtilized: { type: Number, required: true, default: 0 },
+
+    requiredDocuments: [String],
+
+    benefitAmount: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+
+    allocatedBudget: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+
+    budgetUtilized: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+
+    applicationDeadline: {
+      type: Date
+    },
+
     status: {
       type: String,
-      enum: ['active', 'inactive', 'closed'],
-      default: 'active'
+      enum: Object.values(SCHEME_STATUS),
+      default: SCHEME_STATUS.DRAFT
     },
-    createdBy: { type: String } // administrator name/id who configured the scheme
+
+    lowBudgetThresholdPercent: {
+      type: Number,
+      default: 15,
+      min: 0,
+      max: 100
+    },
+
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true
+    }
   },
-  { timestamps: true }
+  {
+    timestamps: true
+  }
 );
 
-module.exports = mongoose.model('Scheme', schemeSchema);
+module.exports = mongoose.model("Scheme", schemeSchema);

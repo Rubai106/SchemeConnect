@@ -1,3 +1,5 @@
+const dns = require("dns");
+dns.setServers(["8.8.8.8", "8.8.4.4"]);
 const mongoose = require("mongoose");
 
 const connectDB = async () => {
@@ -12,3 +14,5 @@ const connectDB = async () => {
 };
 
 module.exports = connectDB;
+module.exports.connectDB = connectDB;
+

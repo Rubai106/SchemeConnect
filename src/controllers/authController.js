@@ -156,6 +156,64 @@ const registerUser = asyncHandler(async (req, res) => {
     });
 });
 
+const createStaffUser = asyncHandler(async (req, res) => {
+    const requiredFields = ["fullName", "email", "password", "role", "division", "district"];
+    const missingFields = getMissingFields(req.body, requiredFields);
+
+    if (missingFields.length > 0) {
+        throw createError(`Missing required fields: ${missingFields.join(", ")}`, 400);
+    }
+
+    const { fullName, email, password, role, division, district, nationalId, contactNumber } = req.body;
+    const normalizedEmail = trimString(email).toLowerCase();
+    const normalizedRole = trimString(role);
+
+    if (!Object.values(ROLES).includes(normalizedRole)) {
+        throw createError("Invalid role selected", 400);
+    }
+
+    const validationErrors = validateEmailAndPassword(normalizedEmail, trimString(password));
+
+    if (validationErrors.length > 0) {
+        throw createError(validationErrors.join(", "), 400);
+    }
+
+    const existingUser = await User.findOne({ email: normalizedEmail });
+
+    if (existingUser) {
+        throw createError("User with this email already exists", 409);
+    }
+
+    const hashedPassword = await bcrypt.hash(trimString(password), 10);
+    const staffUser = await User.create({
+        fullName: trimString(fullName),
+        nationalId: trimString(nationalId || "0000000000"),
+        email: normalizedEmail,
+        contactNumber: trimString(contactNumber || "+0000000000"),
+        password: hashedPassword,
+        role: normalizedRole,
+        accountStatus: ACCOUNT_STATUS.ACTIVE,
+        division: trimString(division),
+        district: trimString(district)
+    });
+
+    return sendSuccess(res, 201, "Staff account created successfully", {
+        user: sanitizeUser(staffUser)
+    });
+});
+
+const getStaffUsers = asyncHandler(async (req, res) => {
+    const users = await User.find({
+        role: {
+            $in: [ROLES.ADMINISTRATOR, ROLES.FINANCE_OFFICER, ROLES.VERIFICATION_OFFICER, ROLES.AUDITOR]
+        }
+    }).select("-password").sort({ createdAt: -1 });
+
+    return sendSuccess(res, 200, "Staff users fetched successfully", {
+        users
+    });
+});
+
 const loginUser = asyncHandler(async (req, res) => {
     const missingFields = getMissingFields(req.body, requiredLoginFields);
 
@@ -245,6 +303,8 @@ const changePassword = asyncHandler(async (req, res) => {
 
 module.exports = {
     registerUser,
+    createStaffUser,
+    getStaffUsers,
     loginUser,
     getCurrentUser,
     logoutUser,
