@@ -240,6 +240,11 @@ const setPage = (content, activePage = "") => {
                                                     : ""
                                             }
 
+                                            ${
+                                                schemeStudioRoles.includes(
+                                                    currentUser.role
+                                                )
+                                                    ? `
                                             <a href="/finance"
                                                data-link
                                                class="${
@@ -260,6 +265,9 @@ const setPage = (content, activePage = "") => {
                                                }">
                                                 Scheme Studio
                                             </a>
+                                                    `
+                                                    : ""
+                                            }
                                         `
                                         : ""
                                 }
@@ -1983,9 +1991,10 @@ const renderConsoleCirculars = async () => {
 // SCHEME CONFIGURATION STUDIO  (Module 1, Feature 3)
 // =========================
 
-const schemeStudioRoles = ["Administrator", "Finance Officer", "Auditor"];
+// Staff-only roles for Scheme Studio, Finance Dashboard and their nav links
+const schemeStudioRoles = ["Administrator", "Finance Officer"];
 
-const formatMoney = (amount) => `à§³${Number(amount).toLocaleString()}`;
+const formatMoney = (amount) => `৳${Number(amount).toLocaleString()}`;
 
 const categoryOptions = ["Agriculture", "Education", "Healthcare", "Disability", "Women", "SME", "Housing"];
 
@@ -2442,7 +2451,7 @@ const loadSchemeList = async (canEdit = currentUser && currentUser.role === "Adm
 };
 
 const renderSchemeStudio = async () => {
-    if (!(await requireAuth())) {
+    if (!(await requireAuth(schemeStudioRoles))) {
         return;
     }
 
@@ -2814,6 +2823,10 @@ const handleViewDocument = async (id) => {
         return;
     }
 
+    // Open the tab synchronously inside the click gesture. Browsers drop
+    // window.open() once an await has run, which made View silently do nothing.
+    const documentWindow = window.open("", "_blank");
+
     try {
         const response = await fetch(`/api/documents/${id}/download`, {
             headers: {
@@ -2831,6 +2844,10 @@ const handleViewDocument = async (id) => {
                 // Response was not JSON, use default message
             }
 
+            if (documentWindow) {
+                documentWindow.close();
+            }
+
             showMessage(errorMessage);
             return;
         }
@@ -2838,11 +2855,19 @@ const handleViewDocument = async (id) => {
         const blob = await response.blob();
         const blobUrl = URL.createObjectURL(blob);
 
-        window.open(blobUrl, "_blank");
+        if (documentWindow) {
+            documentWindow.location.href = blobUrl;
+        } else {
+            showMessage("Please allow popups to view this document.");
+        }
 
         // Revoke after the new tab has loaded the content
         setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
     } catch (error) {
+        if (documentWindow) {
+            documentWindow.close();
+        }
+
         showMessage(error.message || "Could not load document.");
     }
 };
