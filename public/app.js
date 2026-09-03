@@ -36,7 +36,12 @@ const routes = {
     // Main branch routes
     schemeStudio: "/scheme-studio",
     staff: "/staff",
-    finance: "/finance"
+    finance: "/finance",
+
+    // Member 1 citizen routes
+    documents: "/documents",
+    schemes: "/schemes",
+    offices: "/offices"
 };
 
 let currentUser = null;
@@ -45,8 +50,10 @@ const roleDisplayLabel = (role) =>
     role === "Administrator" ? "Govt. Administrator" : role;
 
 const apiRequest = async (url, options = {}) => {
+    const isFormData = options.body instanceof FormData;
+
     const headers = {
-        "Content-Type": "application/json",
+        ...(isFormData ? {} : { "Content-Type": "application/json" }),
         ...(options.headers || {})
     };
 
@@ -257,13 +264,35 @@ const setPage = (content, activePage = "") => {
                                         : ""
                                 }
 
-                                <span aria-disabled="true">
+                                <a href="/documents"
+                                   data-link
+                                   class="${
+                                       activePage === "documents"
+                                           ? "active"
+                                           : ""
+                                   }">
                                     Documents
-                                </span>
+                                </a>
 
-                                <span aria-disabled="true">
+                                <a href="/schemes"
+                                   data-link
+                                   class="${
+                                       activePage === "schemes"
+                                           ? "active"
+                                           : ""
+                                   }">
+                                    Schemes
+                                </a>
+
+                                <a href="/offices"
+                                   data-link
+                                   class="${
+                                       activePage === "offices"
+                                           ? "active"
+                                           : ""
+                                   }">
                                     Offices
-                                </span>
+                                </a>
                             </nav>
 
                             <div class="user-area">
@@ -272,7 +301,7 @@ const setPage = (content, activePage = "") => {
                                         ? `
                                             <span>
                                                 ${currentUser.fullName}
-                                                ·
+                                                -
                                                 ${roleDisplayLabel(
                                                     currentUser.role
                                                 )}
@@ -607,6 +636,48 @@ const renderDashboard = async () => {
                                 Open Eligibility
                             </button>
                         </div>
+
+                        <div class="card summary-card">
+                            <h2>Document Vault</h2>
+                            <p>
+                                Upload and manage National ID, certificates,
+                                and other welfare documents.
+                            </p>
+                            <button
+                                class="button primary"
+                                id="openDocuments"
+                                type="button">
+                                Open Documents
+                            </button>
+                        </div>
+
+                        <div class="card summary-card">
+                            <h2>Welfare Opportunities</h2>
+                            <p>
+                                Browse available schemes and see personalized
+                                recommendations from your profile.
+                            </p>
+                            <button
+                                class="button primary"
+                                id="openSchemes"
+                                type="button">
+                                Open Schemes
+                            </button>
+                        </div>
+
+                        <div class="card summary-card">
+                            <h2>Nearby Offices</h2>
+                            <p>
+                                Find nearby welfare offices and service centers
+                                with map directions.
+                            </p>
+                            <button
+                                class="button primary"
+                                id="openOffices"
+                                type="button">
+                                Open Offices
+                            </button>
+                        </div>
                     `
                     : ""
             }
@@ -625,6 +696,30 @@ const renderDashboard = async () => {
     if (openEligibility) {
         openEligibility.addEventListener("click", () => {
             navigate(routes.eligibility);
+        });
+    }
+
+    const openDocuments = document.getElementById("openDocuments");
+
+    if (openDocuments) {
+        openDocuments.addEventListener("click", () => {
+            navigate(routes.documents);
+        });
+    }
+
+    const openSchemes = document.getElementById("openSchemes");
+
+    if (openSchemes) {
+        openSchemes.addEventListener("click", () => {
+            navigate(routes.schemes);
+        });
+    }
+
+    const openOffices = document.getElementById("openOffices");
+
+    if (openOffices) {
+        openOffices.addEventListener("click", () => {
+            navigate(routes.offices);
         });
     }
 };
@@ -799,7 +894,7 @@ const renderStaffManagement = async () => {
 
             <div class="card">
                 <h2>Staff Directory</h2>
-                <div id="staffList"><p class="empty-note">Loading staff…</p></div>
+                <div id="staffList"><p class="empty-note">Loading staff...</p></div>
             </div>
         </section>
         `,
@@ -935,7 +1030,7 @@ const renderFinanceDashboard = async () => {
                     </tr>
                 </thead>
                 <tbody id="financeLedgerBody">
-                    <tr><td colspan="6" class="empty-note">Loading ledger…</td></tr>
+                    <tr><td colspan="6" class="empty-note">Loading ledger...</td></tr>
                 </tbody>
             </table>
         </section>
@@ -1890,7 +1985,7 @@ const renderConsoleCirculars = async () => {
 
 const schemeStudioRoles = ["Administrator", "Finance Officer", "Auditor"];
 
-const formatMoney = (amount) => `৳${Number(amount).toLocaleString()}`;
+const formatMoney = (amount) => `à§³${Number(amount).toLocaleString()}`;
 
 const categoryOptions = ["Agriculture", "Education", "Healthcare", "Disability", "Women", "SME", "Housing"];
 
@@ -1933,7 +2028,7 @@ const renderSchemeCards = (schemes, canEdit = false) => {
                 </div>
                 <p class="scheme-budget-line">Allocated: ${formatMoney(scheme.allocatedBudget)}</p>
                 <div class="budget-box" id="budget-${scheme._id}">
-                    <p class="budget-meta">Loading budget…</p>
+                    <p class="budget-meta">Loading budget...</p>
                 </div>
                 ${canEdit ? `<button class="button secondary edit-scheme-button" type="button" data-scheme-id="${scheme._id}">
                     Edit
@@ -1957,10 +2052,10 @@ const renderLedgerRows = (ledger) => {
             (transaction) => `
             <tr class="ledger-row" data-transaction-id="${transaction._id}" title="View receipt">
                 <td>${new Date(transaction.createdAt).toLocaleDateString()}</td>
-                <td>${transaction.scheme ? transaction.scheme.name : "—"}</td>
+                <td>${transaction.scheme ? transaction.scheme.name : "-"}</td>
                 <td>${transaction.beneficiaryName}</td>
                 <td>${formatMoney(transaction.amount)}</td>
-                <td class="mono">${transaction.gatewayReference || "—"}</td>
+                <td class="mono">${transaction.gatewayReference || "-"}</td>
                 <td><span class="badge badge-${transaction.status.toLowerCase()}">${transaction.status}</span></td>
             </tr>
         `
@@ -2011,15 +2106,15 @@ const openReceiptModal = async (transactionId) => {
     const modal = ensureReceiptModal();
     const receiptContent = document.getElementById("receiptContent");
 
-    receiptContent.innerHTML = "<p class=\"empty-note\">Loading receipt…</p>";
+    receiptContent.innerHTML = "<p class=\"empty-note\">Loading receipt...</p>";
     modal.classList.remove("hidden");
 
     try {
         const result = await apiRequest(`/api/transactions/${transactionId}`);
         const transaction = result.data.transaction;
         const amount = Number(transaction.amount || 0);
-        const schemeName = transaction.scheme ? transaction.scheme.name : "—";
-        const createdAt = transaction.createdAt ? new Date(transaction.createdAt).toLocaleString() : "—";
+        const schemeName = transaction.scheme ? transaction.scheme.name : "-";
+        const createdAt = transaction.createdAt ? new Date(transaction.createdAt).toLocaleString() : "-";
 
         receiptContent.innerHTML = `
             <div class="receipt-card">
@@ -2028,14 +2123,14 @@ const openReceiptModal = async (transactionId) => {
                     <span>Disbursement Receipt</span>
                 </div>
                 <div class="receipt-grid">
-                    <div><strong>Beneficiary</strong><span>${transaction.beneficiaryName || "—"}</span></div>
-                    <div><strong>Phone</strong><span>${transaction.beneficiaryPhone || "—"}</span></div>
+                    <div><strong>Beneficiary</strong><span>${transaction.beneficiaryName || "-"}</span></div>
+                    <div><strong>Phone</strong><span>${transaction.beneficiaryPhone || "-"}</span></div>
                     <div><strong>Scheme</strong><span>${schemeName}</span></div>
                     <div><strong>Amount</strong><span>${formatMoney(amount)}</span></div>
-                    <div><strong>Reference</strong><span class="mono">${transaction.gatewayReference || "—"}</span></div>
+                    <div><strong>Reference</strong><span class="mono">${transaction.gatewayReference || "-"}</span></div>
                     <div><strong>Status</strong><span class="badge badge-${transaction.status.toLowerCase()}">${transaction.status}</span></div>
                     <div><strong>Date</strong><span>${createdAt}</span></div>
-                    <div><strong>Payment Gateway</strong><span>${transaction.paymentGateway || "—"}</span></div>
+                    <div><strong>Payment Gateway</strong><span>${transaction.paymentGateway || "-"}</span></div>
                 </div>
             </div>
         `;
@@ -2087,7 +2182,7 @@ const renderDisbursementPanel = async () => {
     }
 
     panel.innerHTML = `
-        <h2>Disburse Funds — ${selectedScheme.name}</h2>
+        <h2>Disburse Funds - ${selectedScheme.name}</h2>
         <div id="disbursementMessage" class="message error" hidden></div>
         <form id="disbursementForm">
             <div class="form-row">
@@ -2196,7 +2291,7 @@ const renderDisbursementPanel = async () => {
             if (!clientSecret) {
                 const isSuccessful = transaction.status === "Successful";
                 messageBox.className = `message ${isSuccessful ? "success" : "error"}`;
-                messageBox.textContent = `${result.message}${transaction.gatewayReference ? " — Ref: " + transaction.gatewayReference : ""}`;
+                messageBox.textContent = `${result.message}${transaction.gatewayReference ? " - Ref: " + transaction.gatewayReference : ""}`;
                 messageBox.hidden = false;
                 form.reset();
                 loadLedger();
@@ -2241,7 +2336,7 @@ const renderDisbursementPanel = async () => {
                 });
 
                 messageBox.className = "message success";
-                messageBox.textContent = `${confirmation.message} — Ref: ${confirmation.data.transaction.gatewayReference}`;
+                messageBox.textContent = `${confirmation.message} - Ref: ${confirmation.data.transaction.gatewayReference}`;
                 messageBox.hidden = false;
 
                 form.reset();
@@ -2255,7 +2350,7 @@ const renderDisbursementPanel = async () => {
 
             if (failedTransaction) {
                 messageBox.className = "message error";
-                messageBox.textContent = `${error.result.message} — Failed transaction recorded.`;
+                messageBox.textContent = `${error.result.message} - Failed transaction recorded.`;
                 messageBox.hidden = false;
                 form.reset();
                 loadLedger();
@@ -2409,7 +2504,7 @@ const renderSchemeStudio = async () => {
 
             <div class="card" id="schemeListCard">
                 <h2>Schemes</h2>
-                <div id="schemeList"><p class="empty-note">Loading schemes…</p></div>
+                <div id="schemeList"><p class="empty-note">Loading schemes...</p></div>
             </div>
 
             <div class="card" id="disbursementPanel"></div>
@@ -2436,7 +2531,7 @@ const renderSchemeStudio = async () => {
                     </tr>
                 </thead>
                 <tbody id="ledgerBody">
-                    <tr><td colspan="6" class="empty-note">Loading ledger…</td></tr>
+                    <tr><td colspan="6" class="empty-note">Loading ledger...</td></tr>
                 </tbody>
             </table>
         </section>
@@ -2511,6 +2606,900 @@ const renderSchemeStudio = async () => {
 
 
 
+const DOCUMENT_TYPES = [
+    "National ID",
+    "Birth Certificate",
+    "Income Certificate",
+    "Disability Certificate",
+    "Educational Record",
+    "Other"
+];
+
+const documentTypeOptions = () => {
+    return DOCUMENT_TYPES.map(
+        (type) => `<option value="${type}">${type}</option>`
+    ).join("");
+};
+
+const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric"
+    });
+};
+
+const renderDocuments = async () => {
+    if (!(await requireAuth())) {
+        return;
+    }
+
+    setPage(
+        `
+        <section class="page-title">
+            <h1>Document Vault</h1>
+            <p>Keep your important welfare documents in one place.</p>
+        </section>
+
+        <section class="card upload-card">
+            <h2>Upload Document</h2>
+            <form id="uploadForm">
+                <div id="messageBox" class="message error" hidden></div>
+
+                <div class="form-grid">
+                    <div class="form-row">
+                        <label for="documentType">Document Type</label>
+                        <select id="documentType" name="documentType" required>
+                            <option value="">Select type</option>
+                            ${documentTypeOptions()}
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="documentNumber">Document Number (optional)</label>
+                        <input id="documentNumber" name="documentNumber" type="text">
+                    </div>
+
+                    <div class="form-row full">
+                        <label for="fileInput">File (PDF, JPG, JPEG, PNG — max 5 MB)</label>
+                        <input id="fileInput" name="file" type="file" accept=".pdf,.jpg,.jpeg,.png" required>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button class="button primary" type="submit">Upload Document</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="card documents-card">
+            <h2>Your Documents</h2>
+            <div id="documentsList">
+                <p class="muted-text">Loading documents...</p>
+            </div>
+        </section>
+        `,
+        "documents"
+    );
+
+    // Attach upload form handler
+    document.getElementById("uploadForm").addEventListener("submit", handleUpload);
+
+    // Load documents
+    loadDocuments();
+};
+
+const handleUpload = async (event) => {
+    event.preventDefault();
+
+    const form = event.target;
+    const button = form.querySelector("button[type='submit']");
+    const fileInput = document.getElementById("fileInput");
+
+    if (!fileInput.files || fileInput.files.length === 0) {
+        showMessage("Please select a file.");
+        return;
+    }
+
+    button.disabled = true;
+    button.textContent = "Uploading...";
+
+    const formData = new FormData();
+    formData.append("documentType", form.documentType.value);
+    formData.append("documentNumber", form.documentNumber.value.trim());
+    formData.append("file", fileInput.files[0]);
+
+    try {
+        await apiRequest("/api/documents", {
+            method: "POST",
+            body: formData
+        });
+
+        showMessage("Document uploaded successfully.", "success");
+        form.reset();
+        loadDocuments();
+    } catch (error) {
+        showMessage(error.message);
+    } finally {
+        button.disabled = false;
+        button.textContent = "Upload Document";
+    }
+};
+
+const loadDocuments = async () => {
+    const container = document.getElementById("documentsList");
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = "<p class='muted-text'>Loading documents...</p>";
+
+    try {
+        const result = await apiRequest("/api/documents");
+        const documents = result.data.documents;
+
+        if (!documents || documents.length === 0) {
+            container.innerHTML = "<p class='muted-text'>You have not uploaded any documents yet.</p>";
+            return;
+        }
+
+        renderDocumentList(documents);
+    } catch (error) {
+        container.innerHTML = `<p class='muted-text error-text'>${error.message}</p>`;
+    }
+};
+
+const renderDocumentList = (documents) => {
+    const container = document.getElementById("documentsList");
+
+    if (!container) {
+        return;
+    }
+
+    const rows = documents.map((doc) => `
+        <tr>
+            <td>${doc.documentType}</td>
+            <td>${doc.fileName}</td>
+            <td>${doc.documentNumber || "—"}</td>
+            <td><span class="status-badge status-${doc.verificationStatus.toLowerCase()}">${doc.verificationStatus}</span></td>
+            <td>${formatDate(doc.createdAt)}</td>
+            <td class="action-cell">
+                <button class="action-link" type="button" data-view-id="${doc._id}">View</button>
+                <button class="action-link danger-link" type="button" data-delete-id="${doc._id}">Delete</button>
+            </td>
+        </tr>
+    `).join("");
+
+    container.innerHTML = `
+        <table class="documents-table">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>File Name</th>
+                    <th>Number</th>
+                    <th>Status</th>
+                    <th>Uploaded</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${rows}
+            </tbody>
+        </table>
+    `;
+
+    // Attach view handlers
+    container.querySelectorAll("[data-view-id]").forEach((button) => {
+        button.addEventListener("click", () => {
+            handleViewDocument(button.getAttribute("data-view-id"));
+        });
+    });
+
+    // Attach delete handlers
+    container.querySelectorAll("[data-delete-id]").forEach((button) => {
+        button.addEventListener("click", () => {
+            handleDeleteDocument(button.getAttribute("data-delete-id"));
+        });
+    });
+};
+
+const handleViewDocument = async (id) => {
+    const token = getToken();
+
+    if (!token) {
+        showMessage("Session expired. Please login again.");
+        navigate(routes.login);
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/documents/${id}/download`, {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            let errorMessage = "Could not load document.";
+
+            try {
+                const errorBody = await response.json();
+                errorMessage = errorBody.message || errorMessage;
+            } catch (parseError) {
+                // Response was not JSON, use default message
+            }
+
+            showMessage(errorMessage);
+            return;
+        }
+
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+
+        window.open(blobUrl, "_blank");
+
+        // Revoke after the new tab has loaded the content
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+    } catch (error) {
+        showMessage(error.message || "Could not load document.");
+    }
+};
+
+const handleDeleteDocument = async (id) => {
+    const confirmed = window.confirm("Delete this document?");
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+        await apiRequest(`/api/documents/${id}`, {
+            method: "DELETE"
+        });
+
+        showMessage("Document deleted successfully.", "success");
+        loadDocuments();
+    } catch (error) {
+        showMessage(error.message);
+    }
+};
+
+// ============================================================
+// Easy to modify: scheme categories (frontend)
+// ============================================================
+const SCHEME_CATEGORIES = [
+    "Agriculture",
+    "Education",
+    "Healthcare",
+    "Disability",
+    "Women",
+    "SME",
+    "Housing"
+];
+
+// Citizen-facing statuses (Draft is excluded from citizen view)
+const SCHEME_STATUSES = ["Active", "Paused", "Closed"];
+
+const citizenCategoryOptions = () => {
+    return SCHEME_CATEGORIES.map(
+        (cat) => `<option value="${cat}">${cat}</option>`
+    ).join("");
+};
+
+const citizenStatusOptions = () => {
+    return SCHEME_STATUSES.map(
+        (s) => `<option value="${s}">${s}</option>`
+    ).join("");
+};
+
+// Safe formatting helpers for scheme data
+const formatBenefit = (amount) => {
+    if (amount === null || amount === undefined || isNaN(amount)) {
+        return "Not specified";
+    }
+    return `৳${Number(amount).toLocaleString()}`;
+};
+
+const formatDeadline = (dateValue) => {
+    if (!dateValue) {
+        return "Not specified";
+    }
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) {
+        return "Not specified";
+    }
+    return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric"
+    });
+};
+
+// Map scheme status to CSS badge class
+const statusBadgeClass = (status) => {
+    if (status === "Active") return "status-verified";
+    if (status === "Paused") return "status-paused";
+    if (status === "Closed") return "status-rejected";
+    return "status-pending";
+};
+
+// ============================================================
+// Schemes page
+// ============================================================
+const renderSchemes = async () => {
+    if (!(await requireAuth())) {
+        return;
+    }
+
+    setPage(
+        `
+        <section class="page-title">
+            <h1>Welfare Schemes</h1>
+            <p>Browse available welfare schemes and check your eligibility.</p>
+        </section>
+
+        <section class="card filter-card">
+            <div class="filter-row">
+                <div class="form-row">
+                    <label for="schemeCategory">Category</label>
+                    <select id="schemeCategory">
+                        <option value="">All</option>
+                        ${citizenCategoryOptions()}
+                    </select>
+                </div>
+                <div class="form-row">
+                    <label for="schemeStatus">Status</label>
+                    <select id="schemeStatus">
+                        <option value="">All</option>
+                        ${citizenStatusOptions()}
+                    </select>
+                </div>
+                <div class="form-row filter-action">
+                    <label>&nbsp;</label>
+                    <button class="button primary" id="filterSchemesBtn" type="button">Filter</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="card recommended-card">
+            <h2>Recommended for You</h2>
+            <div id="recommendedList">
+                <p class="muted-text">Loading recommendations...</p>
+            </div>
+        </section>
+
+        <section class="card schemes-card">
+            <h2>All Schemes</h2>
+            <div id="schemesList">
+                <p class="muted-text">Loading schemes...</p>
+            </div>
+        </section>
+        `,
+        "schemes"
+    );
+
+    document.getElementById("filterSchemesBtn").addEventListener("click", loadSchemes);
+    loadSchemes();
+    loadRecommended();
+};
+
+const loadSchemes = async () => {
+    const container = document.getElementById("schemesList");
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = "<p class='muted-text'>Loading schemes...</p>";
+
+    const category = document.getElementById("schemeCategory").value;
+    const status = document.getElementById("schemeStatus").value;
+
+    let url = "/api/schemes?";
+    if (category) url += `category=${encodeURIComponent(category)}&`;
+    if (status) url += `status=${encodeURIComponent(status)}&`;
+
+    try {
+        const result = await apiRequest(url);
+        const schemes = result.data.schemes;
+
+        if (!schemes || schemes.length === 0) {
+            container.innerHTML = "<p class='muted-text'>No schemes found.</p>";
+            return;
+        }
+
+        renderCitizenSchemeCards(schemes);
+    } catch (error) {
+        container.innerHTML = `<p class='muted-text error-text'>${error.message}</p>`;
+    }
+};
+
+const renderCitizenSchemeCards = (schemes) => {
+    const container = document.getElementById("schemesList");
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = schemes.map((scheme) => {
+        const status = scheme.status || "Closed";
+        return `
+        <div class="scheme-item">
+            <div class="scheme-header">
+                <h3>${scheme.name}</h3>
+                <span class="scheme-badge status-badge ${statusBadgeClass(status)}">${status}</span>
+            </div>
+            <span class="scheme-category">${scheme.category}</span>
+            <p class="scheme-desc">${scheme.description || ""}</p>
+            <div class="scheme-meta">
+                <span>Benefit: <strong>${formatBenefit(scheme.benefitAmount)}</strong></span>
+                <span>Deadline: <strong>${formatDeadline(scheme.applicationDeadline)}</strong></span>
+            </div>
+            <button class="button secondary scheme-detail-btn" type="button" data-scheme-id="${scheme._id}">View Details</button>
+        </div>
+    `;
+    }).join("");
+
+    container.querySelectorAll("[data-scheme-id]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            navigate(`/schemes/${btn.getAttribute("data-scheme-id")}`);
+        });
+    });
+};
+
+const loadRecommended = async () => {
+    const container = document.getElementById("recommendedList");
+
+    if (!container) {
+        return;
+    }
+
+    try {
+        const result = await apiRequest("/api/schemes/recommended");
+        const data = result.data;
+
+        if (!data.hasProfile) {
+            container.innerHTML = "<p class='muted-text'>Create your Eligibility Profile to see recommended schemes.</p>";
+            return;
+        }
+
+        if (!data.schemes || data.schemes.length === 0) {
+            container.innerHTML = "<p class='muted-text'>No matching schemes found based on your profile.</p>";
+            return;
+        }
+
+        container.innerHTML = data.schemes.map((scheme) => {
+            const status = scheme.status || "Closed";
+            return `
+            <div class="recommended-item">
+                <div class="scheme-header">
+                    <h3>${scheme.name}</h3>
+                    <span class="eligible-badge">You may be eligible</span>
+                </div>
+                <span class="scheme-category">${scheme.category}</span>
+                <p class="scheme-desc">${scheme.description || ""}</p>
+                <div class="scheme-meta">
+                    <span>Benefit: <strong>${formatBenefit(scheme.benefitAmount)}</strong></span>
+                    <span>Deadline: <strong>${formatDeadline(scheme.applicationDeadline)}</strong></span>
+                </div>
+                <button class="button secondary scheme-detail-btn" type="button" data-scheme-id="${scheme._id}">View Details</button>
+            </div>
+        `;
+        }).join("");
+
+        container.querySelectorAll("[data-scheme-id]").forEach((btn) => {
+            btn.addEventListener("click", () => {
+                navigate(`/schemes/${btn.getAttribute("data-scheme-id")}`);
+            });
+        });
+    } catch (error) {
+        container.innerHTML = `<p class='muted-text error-text'>${error.message}</p>`;
+    }
+};
+
+// ============================================================
+// Scheme detail page
+// ============================================================
+const renderSchemeDetail = async () => {
+    if (!(await requireAuth())) {
+        return;
+    }
+
+    const pathParts = window.location.pathname.split("/");
+    const schemeId = pathParts[pathParts.length - 1];
+
+    setPage(
+        `
+        <section class="page-title">
+            <h1>Scheme Details</h1>
+            <p><a href="/schemes" data-link>← Back to all schemes</a></p>
+        </section>
+
+        <section class="card detail-card">
+            <p class="muted-text">Loading scheme...</p>
+        </section>
+        `,
+        "schemes"
+    );
+
+    // Re-bind the back link
+    document.querySelectorAll("[data-link]").forEach((link) => {
+        link.addEventListener("click", (event) => {
+            event.preventDefault();
+            navigate(link.getAttribute("href"));
+        });
+    });
+
+    try {
+        const result = await apiRequest(`/api/schemes/${schemeId}`);
+        const scheme = result.data.scheme;
+
+        const criteria = scheme.eligibilityDetails || {};
+        const criteriaItems = [];
+        const minIncome = criteria.minIncome ?? criteria.minimumIncome;
+        const maxIncome = criteria.maxIncome ?? criteria.maximumIncome;
+
+        if (minIncome !== null && minIncome !== undefined) {
+            criteriaItems.push(`Minimum income: ৳${Number(minIncome).toLocaleString()}`);
+        }
+        if (maxIncome !== null && maxIncome !== undefined) {
+            criteriaItems.push(`Maximum income: ৳${Number(maxIncome).toLocaleString()}`);
+        }
+        if (criteria.district && criteria.district.trim()) {
+            criteriaItems.push(`District: ${criteria.district}`);
+        }
+        if (criteria.eligibleDistricts && criteria.eligibleDistricts.length > 0) {
+            criteriaItems.push(`Eligible districts: ${criteria.eligibleDistricts.join(", ")}`);
+        }
+        if (criteria.disabilityRequired) {
+            criteriaItems.push("Disability certificate required");
+        }
+        if (criteria.minimumFamilySize !== null && criteria.minimumFamilySize !== undefined) {
+            criteriaItems.push(`Minimum family size: ${criteria.minimumFamilySize}`);
+        }
+
+        const criteriaHtml = criteriaItems.length > 0
+            ? `<ul class="criteria-list">${criteriaItems.map((c) => `<li>${c}</li>`).join("")}</ul>`
+            : "<p class='muted-text'>No specific criteria defined.</p>";
+
+        const docsHtml = scheme.requiredDocuments && scheme.requiredDocuments.length > 0
+            ? `<ul class="docs-list">${scheme.requiredDocuments.map((d) => `<li>${d}</li>`).join("")}</ul>`
+            : "<p class='muted-text'>No documents specified.</p>";
+
+        const detailStatus = scheme.status || "Closed";
+
+        document.querySelector(".detail-card").innerHTML = `
+            <div class="scheme-header">
+                <h2>${scheme.name}</h2>
+                <span class="scheme-badge status-badge ${statusBadgeClass(detailStatus)}">${detailStatus}</span>
+            </div>
+            <span class="scheme-category">${scheme.category}</span>
+            <p class="scheme-desc">${scheme.description || ""}</p>
+
+            <div class="detail-grid">
+                <div class="detail-section">
+                    <h3>Benefit Amount</h3>
+                    <p>${formatBenefit(scheme.benefitAmount)}</p>
+                </div>
+                <div class="detail-section">
+                    <h3>Application Deadline</h3>
+                    <p>${formatDeadline(scheme.applicationDeadline)}</p>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h3>Eligibility Criteria</h3>
+                ${scheme.eligibilityCriteria ? `<p>${scheme.eligibilityCriteria}</p>` : ""}
+                ${criteriaHtml}
+            </div>
+
+            <div class="detail-section">
+                <h3>Required Documents</h3>
+                ${docsHtml}
+            </div>
+        `;
+    } catch (error) {
+        document.querySelector(".detail-card").innerHTML = `<p class='muted-text error-text'>${error.message}</p>`;
+    }
+};
+
+// ============================================================
+// Easy to modify: office types (frontend)
+// ============================================================
+const OFFICE_TYPES = [
+    "Welfare Office",
+    "Union Digital Center",
+    "Service Center"
+];
+
+const officeTypeOptions = () => {
+    return OFFICE_TYPES.map(
+        (type) => `<option value="${type}">${type}</option>`
+    ).join("");
+};
+
+// ============================================================
+// Offices page
+// ============================================================
+let officesMap = null;
+let officesMarkers = [];
+let allOffices = [];
+
+const renderOffices = async () => {
+    if (!(await requireAuth())) {
+        return;
+    }
+
+    setPage(
+        `
+        <section class="page-title">
+            <h1>Nearby Welfare Offices</h1>
+            <p>Find welfare offices, union digital centers, and service centers near you.</p>
+        </section>
+
+        <section class="card filter-card">
+            <div class="filter-row">
+                <div class="form-row">
+                    <label for="officeDivision">Division</label>
+                    <input id="officeDivision" type="text" placeholder="e.g. Dhaka">
+                </div>
+                <div class="form-row">
+                    <label for="officeDistrict">District</label>
+                    <input id="officeDistrict" type="text" placeholder="e.g. Gazipur">
+                </div>
+                <div class="form-row">
+                    <label for="officeType">Office Type</label>
+                    <select id="officeType">
+                        <option value="">All</option>
+                        ${officeTypeOptions()}
+                    </select>
+                </div>
+                <div class="form-row filter-action">
+                    <label>&nbsp;</label>
+                    <button class="button primary" id="filterOfficesBtn" type="button">Filter</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="card map-card">
+            <div id="officesMap" class="map-container">
+                <p class="muted-text">Loading map...</p>
+            </div>
+            <div id="geoStatus" class="geo-status"></div>
+        </section>
+
+        <section class="card offices-card">
+            <h2>Office Directory</h2>
+            <div id="officesList">
+                <p class="muted-text">Loading offices...</p>
+            </div>
+        </section>
+        `,
+        "offices"
+    );
+
+    document.getElementById("filterOfficesBtn").addEventListener("click", loadOffices);
+
+    loadOffices();
+    initMap();
+};
+
+const initMap = async () => {
+    // Fetch Google Maps API key from server config
+    let apiKey = "";
+
+    try {
+        const response = await fetch("/api/config/maps-key");
+        const config = await response.json();
+        apiKey = config.key || "";
+    } catch (error) {
+        // Key fetch failed, map won't load
+    }
+
+    const mapContainer = document.getElementById("officesMap");
+
+    if (!apiKey || apiKey === "YOUR_GOOGLE_MAPS_API_KEY_HERE") {
+        mapContainer.innerHTML = "<p class='muted-text'>Google Maps API key not configured. Set GOOGLE_MAPS_API_KEY in .env to enable the map.</p>";
+        return;
+    }
+
+    // Load Google Maps script
+    if (!window.google || !window.google.maps) {
+        await new Promise((resolve, reject) => {
+            const script = document.createElement("script");
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=Function.prototype`;
+            script.async = true;
+            script.defer = true;
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    }
+
+    // Default center (Dhaka)
+    const defaultCenter = { lat: 23.8103, lng: 90.4125 };
+
+    officesMap = new google.maps.Map(mapContainer, {
+        center: defaultCenter,
+        zoom: 7
+    });
+
+    // Try geolocation
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const userPos = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                };
+                officesMap.setCenter(userPos);
+                officesMap.setZoom(10);
+
+                const statusEl = document.getElementById("geoStatus");
+                if (statusEl) {
+                    statusEl.textContent = `Location detected: ${userPos.lat.toFixed(4)}, ${userPos.lng.toFixed(4)}`;
+                }
+
+                // Load nearby offices
+                loadNearbyOffices(userPos.lat, userPos.lng);
+            },
+            () => {
+                const statusEl = document.getElementById("geoStatus");
+                if (statusEl) {
+                    statusEl.textContent = "Location access denied. Showing all offices.";
+                }
+            }
+        );
+    }
+};
+
+const loadNearbyOffices = async (lat, lng) => {
+    try {
+        const result = await apiRequest(`/api/offices/nearby?latitude=${lat}&longitude=${lng}`);
+        allOffices = result.data.offices;
+        renderOfficesList(allOffices);
+        renderMapMarkers(allOffices);
+    } catch (error) {
+        // Nearby failed, regular list should still work
+    }
+};
+
+const loadOffices = async () => {
+    const container = document.getElementById("officesList");
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = "<p class='muted-text'>Loading offices...</p>";
+
+    const division = document.getElementById("officeDivision").value.trim();
+    const district = document.getElementById("officeDistrict").value.trim();
+    const officeType = document.getElementById("officeType").value;
+
+    let url = "/api/offices?";
+    if (division) url += `division=${encodeURIComponent(division)}&`;
+    if (district) url += `district=${encodeURIComponent(district)}&`;
+    if (officeType) url += `officeType=${encodeURIComponent(officeType)}&`;
+
+    try {
+        const result = await apiRequest(url);
+        allOffices = result.data.offices;
+
+        if (!allOffices || allOffices.length === 0) {
+            container.innerHTML = "<p class='muted-text'>No offices found.</p>";
+            clearMarkers();
+            return;
+        }
+
+        renderOfficesList(allOffices);
+        renderMapMarkers(allOffices);
+    } catch (error) {
+        container.innerHTML = `<p class='muted-text error-text'>${error.message}</p>`;
+    }
+};
+
+const renderOfficesList = (offices) => {
+    const container = document.getElementById("officesList");
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = offices.map((office) => `
+        <div class="office-item">
+            <div class="office-header">
+                <h3>${office.name}</h3>
+                <span class="office-type-badge">${office.officeType}</span>
+            </div>
+            <p class="office-address">${office.address}, ${office.district}, ${office.division}</p>
+            <div class="office-meta">
+                <span>Phone: ${office.contactNumber}</span>
+                <span>Hours: ${office.operatingHours}</span>
+                ${office.distance !== undefined ? `<span>Distance: ${office.distance} km</span>` : ""}
+            </div>
+            <p class="office-services">Services: ${office.services.join(", ")}</p>
+            <div class="office-actions">
+                <button class="button secondary" type="button" data-map-id="${office._id}">View on Map</button>
+                <a class="button secondary" href="https://www.google.com/maps/dir/${office.latitude},${office.longitude}" target="_blank" rel="noopener">Get Directions</a>
+            </div>
+        </div>
+    `).join("");
+
+    container.querySelectorAll("[data-map-id]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            focusOfficeOnMap(btn.getAttribute("data-map-id"));
+        });
+    });
+};
+
+const renderMapMarkers = (offices) => {
+    if (!officesMap || !window.google || !window.google.maps) {
+        return;
+    }
+
+    clearMarkers();
+
+    const bounds = new google.maps.LatLngBounds();
+
+    offices.forEach((office) => {
+        const position = { lat: office.latitude, lng: office.longitude };
+
+        const marker = new google.maps.Marker({
+            position,
+            map: officesMap,
+            title: office.name
+        });
+
+        const infoWindow = new google.maps.InfoWindow({
+            content: `
+                <div style="font-size:13px;min-width:180px;">
+                    <strong>${office.name}</strong><br>
+                    <em>${office.officeType}</em><br>
+                    ${office.address}<br>
+                    Phone: ${office.contactNumber}
+                </div>
+            `
+        });
+
+        marker.addListener("click", () => {
+            infoWindow.open(officesMap, marker);
+        });
+
+        officesMarkers.push(marker);
+        bounds.extend(position);
+    });
+
+    if (offices.length > 0) {
+        officesMap.fitBounds(bounds);
+    }
+};
+
+const clearMarkers = () => {
+    officesMarkers.forEach((marker) => marker.setMap(null));
+    officesMarkers = [];
+};
+
+const focusOfficeOnMap = (officeId) => {
+    const office = allOffices.find((o) => o._id === officeId);
+
+    if (!office || !officesMap) {
+        return;
+    }
+
+    officesMap.setCenter({ lat: office.latitude, lng: office.longitude });
+    officesMap.setZoom(15);
+
+    // Find and click the marker
+    const markerIndex = allOffices.indexOf(office);
+    if (markerIndex >= 0 && officesMarkers[markerIndex]) {
+        google.maps.event.trigger(officesMarkers[markerIndex], "click");
+    }
+};
+
+
 const logout = async () => {
     try {
         await apiRequest("/api/auth/logout", {
@@ -2553,6 +3542,26 @@ const render = async () => {
         return;
     }
 
+    if (path === routes.documents) {
+        await renderDocuments();
+        return;
+    }
+
+    if (path === routes.schemes) {
+        await renderSchemes();
+        return;
+    }
+
+    if (path.startsWith("/schemes/")) {
+        await renderSchemeDetail();
+        return;
+    }
+
+    if (path === routes.offices) {
+        await renderOffices();
+        return;
+    }
+
     if (path === routes.consoleBeneficiaries) {
         await renderConsoleBeneficiaries();
         return;
@@ -2589,6 +3598,7 @@ const render = async () => {
 
 window.addEventListener("popstate", render);
 render();
+
 
 
 
